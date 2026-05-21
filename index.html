@@ -277,8 +277,33 @@ body.sem-fundo::after {
       </div>
     <div class="search-results" id="search-results"></div>
      
+ 
+
     <!-- SEÇÃO DE FAVORITOS -->
-    <h6 class="sidebar-heading-sm">FAVORITOS</h6>
+<div style="display: flex; justify-content: space-between; align-items: center; padding: 0 15px;">
+  <h6 class="sidebar-heading-sm mb-0">FAVORITOS</h6>
+
+  <button 
+    onclick="clearAllFavorites()" 
+    style="
+      background: none;
+      border: none;
+      color: #dc3545;
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+      width: auto;
+      padding: 0;
+      margin: 0;
+    ">
+    Limpar Favoritos
+  </button>
+</div>
+
+<ul class="nav flex-column" id="favorites-menu">
+  <!-- Os favoritos serão carregados dinamicamente aqui -->
+</ul>
+
     <ul class="nav flex-column" id="favorites-menu">
 
     <!-- Os favoritos serão carregados dinamicamente aqui -->
@@ -1133,7 +1158,36 @@ body.sem-fundo::after {
       loadUserFavorites();
     });
 
+function clearAllFavorites() {
 
+  swal({
+    title: "Limpar favoritos?",
+    text: "Todos os favoritos serão removidos.",
+    icon: "warning",
+    buttons: ["Cancelar", "Sim, limpar"],
+    dangerMode: true,
+  })
+  .then((willDelete) => {
+
+    if (willDelete) {
+
+      // Remove do localStorage
+      localStorage.removeItem("favorites");
+
+      // Remove visual dos ícones
+      document.querySelectorAll('.favorite-icon').forEach(icon => {
+        icon.classList.remove('favorited');
+      });
+
+      // Limpa menu
+      document.getElementById('favorites-menu').innerHTML = '';
+
+      swal("Favoritos removidos com sucesso!", {
+        icon: "success",
+      });
+    }
+  });
+}
 
 
   </script>
