@@ -277,33 +277,8 @@ body.sem-fundo::after {
       </div>
     <div class="search-results" id="search-results"></div>
      
- 
-
     <!-- SEÇÃO DE FAVORITOS -->
-<div style="display: flex; justify-content: space-between; align-items: center; padding: 0 15px;">
-  <h6 class="sidebar-heading-sm mb-0">FAVORITOS</h6>
-
-  <button 
-    onclick="clearAllFavorites()" 
-    style="
-      background: none;
-      border: none;
-      color: #dc3545;
-      font-size: 0.72rem;
-      font-weight: 600;
-      cursor: pointer;
-      width: auto;
-      padding: 0;
-      margin: 0;
-    ">
-    Limpar Favoritos
-  </button>
-</div>
-
-<ul class="nav flex-column" id="favorites-menu">
-  <!-- Os favoritos serão carregados dinamicamente aqui -->
-</ul>
-
+    <h6 class="sidebar-heading-sm">FAVORITOS</h6>
     <ul class="nav flex-column" id="favorites-menu">
 
     <!-- Os favoritos serão carregados dinamicamente aqui -->
@@ -821,10 +796,10 @@ body.sem-fundo::after {
 <!-- INICIO DO BLOCO ASPER EUA -->
   <ul class="nav flex-column">
     <li class="nav-item">
-      <a class="nav-link" data-toggle="collapse" href="#DiretoriaMenueua2025" role="button" aria-expanded="true" aria-controls="DiretoriaMenueua">
+      <a class="nav-link" data-toggle="collapse" href="#DiretoriaMenueua" role="button" aria-expanded="true" aria-controls="DiretoriaMenueua">
         <span data-feather="folder"></span> Asper USA
       </a>
-        <div class="collapse" id="DiretoriaMenueua2025">
+        <div class="collapse" id="DiretoriaMenueua">
           <ul class="nav flex-column ml-3">
             <li class="nav-item">
               <a class="nav-link" href="#" onclick="loadReport('Sales Executive Summary','https://app.powerbi.com/reportEmbed?reportId=49b572bd-3dcc-4042-a574-fc001d0fb360&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1',this)">
@@ -1001,71 +976,30 @@ body.sem-fundo::after {
 
     // Sistema de Favoritos
     function toggleFavorite(event, element) {
-  event.stopPropagation();
-
-  const title = element.dataset.title;
-  const url = element.dataset.url;
-
-  // Recupera favoritos
-  let favorites = JSON.parse(localStorage.getItem("favorites")) || [];
-
-  // Verifica usando URL (não título)
-  const existingIndex = favorites.findIndex(f => f.url === url);
-
-  if (existingIndex > -1) {
-
-    // Remove favorito
-    favorites.splice(existingIndex, 1);
-    element.classList.remove("favorited");
-
-  } else {
-
-    // Adiciona favorito
-    favorites.push({
-      title: title,
-      url: url
-    });
-
-    element.classList.add("favorited");
-  }
-
-  // Salva
-  localStorage.setItem("favorites", JSON.stringify(favorites));
-
-  // Atualiza menu
-  renderFavorites();
-  function renderFavorites() {
-
-  const favoritesMenu = document.getElementById("favorites-menu");
-  favoritesMenu.innerHTML = "";
-
-  let favorites = JSON.parse(localStorage.getItem("favorites")) || [];
-
-  // Remove duplicados por URL
-  favorites = favorites.filter(
-    (fav, index, self) =>
-      index === self.findIndex(f => f.url === fav.url)
-  );
-
-  // Salva lista limpa
-  localStorage.setItem("favorites", JSON.stringify(favorites));
-
-  favorites.forEach(fav => {
-
-    const li = document.createElement("li");
-    li.className = "nav-item";
-
-    li.innerHTML = `
-      <a class="nav-link" href="#"
-        onclick="loadReport('${fav.title}','${fav.url}',this)">
-        ⭐ ${fav.title}
-      </a>
-    `;
-
-    favoritesMenu.appendChild(li);
-  });
-}
-}
+      event.stopPropagation();
+      
+      const title = element.getAttribute('data-title');
+      const url = element.getAttribute('data-url');
+      const favorite = { title, url };
+      
+      let favorites = JSON.parse(localStorage.getItem('userFavorites') || '[]');
+      const existingIndex = favorites.findIndex(fav => fav.url === url);
+      
+      if (existingIndex > -1) {
+        // Remove dos favoritos
+        favorites.splice(existingIndex, 1);
+        element.classList.remove('favorited');
+        swal("Removido!", `${title} foi removido dos favoritos`, "info");
+      } else {
+        // Adiciona aos favoritos
+        favorites.push(favorite);
+        element.classList.add('favorited');
+        swal("Adicionado!", `${title} foi adicionado aos favoritos`, "success");
+      }
+      
+      localStorage.setItem('userFavorites', JSON.stringify(favorites));
+      loadUserFavorites();
+    }
 
     // Função para carregar favoritos do usuário
     function loadUserFavorites() {
@@ -1199,36 +1133,7 @@ body.sem-fundo::after {
       loadUserFavorites();
     });
 
-function clearAllFavorites() {
 
-  swal({
-    title: "Limpar favoritos?",
-    text: "Todos os favoritos serão removidos.",
-    icon: "warning",
-    buttons: ["Cancelar", "Sim, limpar"],
-    dangerMode: true,
-  })
-  .then((willDelete) => {
-
-    if (willDelete) {
-
-      // Remove do localStorage
-      localStorage.removeItem("favorites");
-
-      // Remove visual dos ícones
-      document.querySelectorAll('.favorite-icon').forEach(icon => {
-        icon.classList.remove('favorited');
-      });
-
-      // Limpa menu
-      document.getElementById('favorites-menu').innerHTML = '';
-
-      swal("Favoritos removidos com sucesso!", {
-        icon: "success",
-      });
-    }
-  });
-}
 
 
   </script>
