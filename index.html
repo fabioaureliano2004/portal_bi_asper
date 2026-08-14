@@ -340,8 +340,8 @@ body.sem-fundo::after {
 
 <li class="nav-item">
     <a class="nav-link"
-       href="https://app.hubspot.com/login"
-       onclick="loadReport('CRM', 'https://app.hubspot.com/login', this); return false;">
+       href="https://app.hubspot.com/contacts/50100454/objects/0-3/views/all/list"
+       onclick="loadReport('CRM', 'https://app.hubspot.com/contacts/50100454/objects/0-3/views/all/list', this); return false;">
         <svg xmlns="http://www.w3.org/2000/svg"
              width="16"
              height="16"
@@ -355,7 +355,7 @@ body.sem-fundo::after {
 
         <span class="favorite-icon"
               data-title="CRM"
-              data-url="https://app.hubspot.com/login"
+              data-url="https://app.hubspot.com/contacts/50100454/objects/0-3/views/all/list"
               onclick="toggleFavorite(event, this)">
             
         </span>
@@ -1297,23 +1297,115 @@ body.sem-fundo::after {
       loadUserFavorites();
     });
 
-function toggleFavorite(event, elemento) {
+// ============================================
+// LOAD REPORT
+// ============================================
 
-    // Impede que o clique na estrela
-    // execute o clique do link pai
+function loadReport(title, url, element) {
+
+    if (!url) return;
+
+    // CRM → abre externamente
+    if (title === 'CRM') {
+
+        window.open(
+            'https://app.hubspot.com/contacts/50100454/objects/0-3/views/all/list',
+            '_blank',
+            'noopener,noreferrer'
+        );
+
+        return;
+    }
+
+    // Power BI → iframe
+    const iframe = document.getElementById('powerbi-frame');
+
+    if (!iframe) {
+        console.error('powerbi-frame não encontrado.');
+        return;
+    }
+
+    iframe.src = url;
+
+    const reportTitle = document.getElementById('report-title');
+
+    if (reportTitle) {
+        reportTitle.textContent = title;
+    }
+
+    // Remove seleção anterior
+    document.querySelectorAll('.nav-link').forEach(link => {
+        const onclick = link.getAttribute('onclick') || '';
+
+        if (onclick.includes('loadReport')) {
+            link.classList.remove('active');
+        }
+    });
+
+    // Seleciona o atual
+    if (element) {
+        element.classList.add('active');
+    }
+}
+
+
+// ============================================
+// FAVORITOS
+// ============================================
+
+function toggleFavorite(event, element) {
+
     event.preventDefault();
     event.stopPropagation();
 
-    const title = elemento.getAttribute('data-title');
-    const url = elemento.getAttribute('data-url');
+    const title = element.getAttribute('data-title');
+    const url = element.getAttribute('data-url');
 
-    // Aqui entra sua lógica atual de favoritos
-    console.log('Favorito:', title, url);
+    const favorite = {
+        title,
+        url
+    };
 
-    // Exemplo visual
-    elemento.classList.toggle('active');
+    let favorites = JSON.parse(
+        localStorage.getItem('userFavorites') || '[]'
+    );
+
+    const existingIndex = favorites.findIndex(
+        fav => fav.url === url
+    );
+
+    if (existingIndex > -1) {
+
+        favorites.splice(existingIndex, 1);
+
+        element.classList.remove('favorited');
+
+        swal(
+            "Removido!",
+            `${title} foi removido dos favoritos`,
+            "info"
+        );
+
+    } else {
+
+        favorites.push(favorite);
+
+        element.classList.add('favorited');
+
+        swal(
+            "Adicionado!",
+            `${title} foi adicionado aos favoritos`,
+            "success"
+        );
+    }
+
+    localStorage.setItem(
+        'userFavorites',
+        JSON.stringify(favorites)
+    );
+
+    loadUserFavorites();
 }
-
 
   </script>
 </body>
