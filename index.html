@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -109,21 +110,8 @@
       font-size: 18px;
       display: none;
     }
-    
-  .login-wrapper {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    
-  }
 
-  /* Suavização de entrada */
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 0; transform: translateY(0); }
-  }
-      /* Sombra e efeito hover */
+    /* Sombra e efeito hover */
   .form-signin {
     transition: all 0.3s ease-in-out;
   }
@@ -281,7 +269,85 @@ body.sem-fundo::after {
     color:#888;
 }
 
+/* ============================================
+   MELHORIAS: menu mobile, favoritos, loading
+   ============================================ */
 
+/* Ícone de favorito padronizado via CSS (evita inconsistência ★ vs SVG) */
+.favorite-icon {
+  font-size: 0;
+}
+.favorite-icon::before {
+  content: "\2605"; /* estrela unicode, único lugar que define o glifo */
+  font-size: 14px;
+}
+
+/* Botão hambúrguer (some em telas >= md) */
+.navbar-toggler-custom {
+  display: none;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 1.4rem;
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+/* Overlay escuro atrás do drawer no mobile */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.4);
+  z-index: 99;
+}
+.sidebar-backdrop.open { display: block; }
+
+@media (max-width: 767.98px) {
+  .navbar-toggler-custom { display: inline-block; }
+
+  .sidebar.d-none {
+    display: block !important;
+  }
+  .sidebar {
+    left: -260px;
+    width: 260px;
+    background: #f8f9fa;
+    transition: left 0.25s ease-in-out;
+    z-index: 100;
+  }
+  .sidebar.open { left: 0; box-shadow: 2px 0 12px rgba(0,0,0,.25); }
+}
+
+/* Spinner de carregamento do relatório Power BI */
+.report-loading {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  z-index: 2;
+  transition: opacity .2s ease;
+}
+.report-loading.hidden { opacity: 0; pointer-events: none; }
+.report-spinner {
+  width: 42px;
+  height: 42px;
+  border: 4px solid #e0e0e0;
+  border-top-color: #007b6e;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Item ativo na navegação, reforço via aria-current */
+.nav-link[aria-current="page"] {
+  background-color:#e0f3f3;
+  color:#007b6e;
+  border-left-color:#007b6e;
+}
+.nav-link[aria-current="page"] .feather { color:#007b6e; }
 
   </style>
 </head>
@@ -305,14 +371,18 @@ body.sem-fundo::after {
 <!-- INICIO PORTAL -->
   <div id="portal-screen" style="display:none;">
     <nav class="navbar navbar-dark fixed-top bg-dark flex-md-nowrap p-0 shadow">
+      <button class="navbar-toggler-custom" id="sidebar-toggle" aria-label="Abrir menu de navegação" aria-expanded="false" aria-controls="main-sidebar" onclick="toggleSidebar()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5"/></svg>
+      </button>
       <a class="navbar-brand col-sm-3 col-md-2 mr-0" href="#" style="font-size: 0.85rem;">
         Portal Asper Intelligence
       </a>
       <h5 id="report-title" class="mb-0 text-white">Cadência de Vendas</h5>
     </nav>
+    <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="toggleSidebar(false)"></div>
     <div class="container-fluid">
       <div class="row">
-        <nav class="col-md-2 d-none d-md-block sidebar">
+        <nav class="col-md-2 d-none d-md-block sidebar" id="main-sidebar">
           <div class="sidebar-sticky">
             <div class="px-3">
               <img src="https://images.squarespace-cdn.com/content/v1/648c617f3a34866b896bcf53/3b57831c-5980-4d59-bb9e-06421fa4a38c/logo.png?format=1500w" alt="Logo" width="120">
@@ -324,7 +394,7 @@ body.sem-fundo::after {
     <!-- BARRA DE BUSCA -->
     <div class="search-container">
       <div style="position: relative;">
-        <input type="text" class="search-input" id="search-input" placeholder="Buscar relatórios...">
+        <input type="text" class="search-input" id="search-input" placeholder="Buscar relatórios..." aria-label="Buscar relatórios">
           <button class="search-clear" id="search-clear">×</button>
       </div>
     <div class="search-results" id="search-results"></div>
@@ -387,7 +457,7 @@ body.sem-fundo::after {
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-diagram-3" viewBox="0 0 16 16">
                 <path fill-rule="evenodd" d="M6 3.5A1.5 1.5 0 0 1 7.5 2h1A1.5 1.5 0 0 1 10 3.5v1A1.5 1.5 0 0 1 8.5 6v1H14a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-1 0V8h-5v.5a.5.5 0 0 1-1 0V8h-5v.5a.5.5 0 0 1-1 0v-1A.5.5 0 0 1 2 7h5.5V6A1.5 1.5 0 0 1 6 4.5zM8.5 5a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5zM0 11.5A1.5 1.5 0 0 1 1.5 10h1A1.5 1.5 0 0 1 4 11.5v1A1.5 1.5 0 0 1 2.5 14h-1A1.5 1.5 0 0 1 0 12.5zm1.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm4.5.5A1.5 1.5 0 0 1 7.5 10h1a1.5 1.5 0 0 1 1.5 1.5v1A1.5 1.5 0 0 1 8.5 14h-1A1.5 1.5 0 0 1 6 12.5zm1.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm4.5.5a1.5 1.5 0 0 1 1.5-1.5h1a1.5 1.5 0 0 1 1.5 1.5v1a1.5 1.5 0 0 1-1.5 1.5h-1a1.5 1.5 0 0 1-1.5-1.5zm1.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0  0-.5-.5z"/>
               </svg> Resumo C-Level
-              <span class="favorite-icon" data-title="Resumo C-Level" data-url="https://app.powerbi.com/reportEmbed?reportId=9724d56e-3aa2-4a68-a3f0-d80b83245a8a&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+              <span class="favorite-icon" data-title="Resumo C-Level" data-url="https://app.powerbi.com/reportEmbed?reportId=9724d56e-3aa2-4a68-a3f0-d80b83245a8a&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
           </a>
       </li>
 
@@ -397,7 +467,7 @@ body.sem-fundo::after {
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bar-chart" viewBox="0 0 16 16">
             <path d="M4 11H2v3h2zm5-4H7v7h2zm5-5v12h-2V2zm-2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM6 7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm-5 4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1z"/>
           </svg> Resumo Executivo de Vendas
-          <span class="favorite-icon" data-title="Resumo Executivo de Vendas" data-url="https://app.powerbi.com/reportEmbed?reportId=6a57df5d-f9d0-4204-afb5-654150d91c67&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+          <span class="favorite-icon" data-title="Resumo Executivo de Vendas" data-url="https://app.powerbi.com/reportEmbed?reportId=6a57df5d-f9d0-4204-afb5-654150d91c67&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
       </a>
     </li>
 
@@ -407,7 +477,7 @@ body.sem-fundo::after {
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-graph-up-arrow" viewBox="0 0 16 16">
           <path fill-rule="evenodd" d="M0 0h1v15h15v1H0zm10 3.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V4.9l-3.613 4.417a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61L13.445 4H10.5a.5.5 0 0 1-.5-.5"/>
         </svg> Cadência de Vendas
-        <span class="favorite-icon" data-title="Cadência de Vendas" data-url="https://app.powerbi.com/reportEmbed?reportId=6f55fb9b-386d-4161-9738-5ba33c28e08c&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+        <span class="favorite-icon" data-title="Cadência de Vendas" data-url="https://app.powerbi.com/reportEmbed?reportId=6f55fb9b-386d-4161-9738-5ba33c28e08c&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
       </a>
   </li>
 
@@ -418,7 +488,7 @@ body.sem-fundo::after {
           <path d="M4.5 12a.5.5 0 0 1-.5-.5v-2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5zm3 0a.5.5 0 0 1-.5-.5v-4a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5zm3 0a.5.5 0 0 1-.5-.5v-6a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-.5.5z"/>
             <path d="M4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2zm0 1h8a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1"/>
             </svg> SPS - Sales Performance Score
-        <span class="favorite-icon" data-title="SPS - Sales Performance Score" data-url="https://app.powerbi.com/reportEmbed?reportId=1092bccc-e27a-472d-ab13-4fc77ae0951e&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+        <span class="favorite-icon" data-title="SPS - Sales Performance Score" data-url="https://app.powerbi.com/reportEmbed?reportId=1092bccc-e27a-472d-ab13-4fc77ae0951e&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
     </a>
   </li>
 
@@ -429,7 +499,7 @@ body.sem-fundo::after {
         <path d="M5 4a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1zm-.5 2.5A.5.5 0 0 1 5 6h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5M5 8a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1zm0 2a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1z"/>
         <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zm10-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1"/>
       </svg> Monitoramento Deals
-      <span class="favorite-icon" data-title="Monitoramento Deals" data-url="https://app.powerbi.com/reportEmbed?reportId=7da691d4-b687-43a8-a9f2-6309db31147f&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+      <span class="favorite-icon" data-title="Monitoramento Deals" data-url="https://app.powerbi.com/reportEmbed?reportId=7da691d4-b687-43a8-a9f2-6309db31147f&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
     </a>
   </li>
 
@@ -439,7 +509,7 @@ body.sem-fundo::after {
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-graph-down-arrow" viewBox="0 0 16 16">
       <path fill-rule="evenodd" d="M0 0h1v15h15v1H0zm10 11.5a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 0-1 0v2.6l-3.613-4.417a.5.5 0 0 0-.74-.037L7.06 8.233 3.404 3.206a.5.5 0 0 0-.808.588l4 5.5a.5.5 0 0 0 .758.06l2.609-2.61L13.445 11H10.5a.5.5 0 0 0-.5.5"/>
       </svg> Perdidas
-      <span class="favorite-icon" data-title="Perdidas" data-url="https://app.powerbi.com/reportEmbed?reportId=865fea56-8802-44b6-8c2c-59c04b5d0ee4&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+      <span class="favorite-icon" data-title="Perdidas" data-url="https://app.powerbi.com/reportEmbed?reportId=865fea56-8802-44b6-8c2c-59c04b5d0ee4&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
     </a>
   </li>
 
@@ -450,7 +520,7 @@ body.sem-fundo::after {
           <path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v1h14V4a1 1 0 0 0-1-1zm13 4H1v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1z"/>
           <path d="M2 10a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z"/>
         </svg> Carteira
-        <span class="favorite-icon" data-title="Carteira" data-url="https://app.powerbi.com/reportEmbed?reportId=b427e73f-c422-48c3-afd0-f97f109b7c2c&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+        <span class="favorite-icon" data-title="Carteira" data-url="https://app.powerbi.com/reportEmbed?reportId=b427e73f-c422-48c3-afd0-f97f109b7c2c&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
       </a>
     </li> 
 
@@ -460,7 +530,7 @@ body.sem-fundo::after {
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark" viewBox="0 0 16 16">
             <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5z"/>
               </svg> Certificações AM
-                <span class="favorite-icon" data-title="Certificações AM" data-url="https://app.powerbi.com/reportEmbed?reportId=59318a47-d338-4f13-b1f2-d7ca3058dbac&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+                <span class="favorite-icon" data-title="Certificações AM" data-url="https://app.powerbi.com/reportEmbed?reportId=59318a47-d338-4f13-b1f2-d7ca3058dbac&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
               </a>
         </li> -->
 
@@ -470,7 +540,7 @@ body.sem-fundo::after {
            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-briefcase" viewBox="0 0 16 16">
               <path d="M6.5 1A1.5 1.5 0 0 0 5 2.5V3H1.5A1.5 1.5 0 0 0 0 4.5v8A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-8A1.5 1.5 0 0 0 14.5 3H11v-.5A1.5 1.5 0 0 0 9.5 1zm0 1h3a.5.5 0 0 1 .5.5V3H6v-.5a.5.5 0 0 1 .5-.5m1.886 6.914L15 7.151V12.5a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5V7.15l6.614 1.764a1.5 1.5 0 0 0 .772 0M1.5 4h13a.5.5 0 0 1 .5.5v1.616L8.129 7.948a.5.5 0 0 1-.258 0L1 6.116V4.5a.5.5 0 0 1 .5-.5"/>
           </svg> Account View
-              <span class="favorite-icon" data-title="Account View" data-url="https://app.powerbi.com/reportEmbed?reportId=31c61a27-04f4-4dcb-b84d-1e5b6c4b2a7a&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+              <span class="favorite-icon" data-title="Account View" data-url="https://app.powerbi.com/reportEmbed?reportId=31c61a27-04f4-4dcb-b84d-1e5b6c4b2a7a&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
           </a>
       </li>
 
@@ -480,7 +550,7 @@ body.sem-fundo::after {
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bar-chart-fill" viewBox="0 0 16 16">
               <path d="M1 11a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm5-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm5-5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1z"/>
             </svg> Evolução Pipeline
-              <span class="favorite-icon" data-title="Evolução Pipeline 2026" data-url="https://app.powerbi.com/reportEmbed?reportId=b1301d5c-5c3f-404d-841b-c1f204273df5&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+              <span class="favorite-icon" data-title="Evolução Pipeline 2026" data-url="https://app.powerbi.com/reportEmbed?reportId=b1301d5c-5c3f-404d-841b-c1f204273df5&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
           </a>
       </li>
       
@@ -506,7 +576,7 @@ body.sem-fundo::after {
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-justify" viewBox="0 0 16 16">
                 <path fill-rule="evenodd" d="M2 12.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m0-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m0-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m0-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5"/>
               </svg> All Hands
-              <span class="favorite-icon" data-title="All Hands" data-url="https://app.powerbi.com/reportEmbed?reportId=4c30c06b-ee92-466f-a209-a4208f4c0a13&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+              <span class="favorite-icon" data-title="All Hands" data-url="https://app.powerbi.com/reportEmbed?reportId=4c30c06b-ee92-466f-a209-a4208f4c0a13&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
             </a>
           </li>
 
@@ -517,7 +587,7 @@ body.sem-fundo::after {
                 <path d="M13.5 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1zm-11-1a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2z"/>
                 <path d="M6.5 3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1zm-4 0a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1zm8 0a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1z"/>
               </svg> Previsibilidade de Projetos
-              <span class="favorite-icon" data-title="Previsibilidade de Projetos" data-url="https://app.powerbi.com/reportEmbed?reportId=cec60068-b370-4859-b1e3-e003ab00bf19&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+              <span class="favorite-icon" data-title="Previsibilidade de Projetos" data-url="https://app.powerbi.com/reportEmbed?reportId=cec60068-b370-4859-b1e3-e003ab00bf19&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
             </a>
           </li>
           <!-- RELATORIO BASE DE VENDAS -->
@@ -527,7 +597,7 @@ body.sem-fundo::after {
                 <path d="M5.5 7a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1zM5 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m0 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5"/>
                 <path d="M9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.5zm0 1v2A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z"/>
               </svg> Base de Vendas
-              <span class="favorite-icon" data-title="Base de Vendas" data-url="https://app.powerbi.com/reportEmbed?reportId=e06c14b9-1004-46d1-98c4-cf618695ad84&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+              <span class="favorite-icon" data-title="Base de Vendas" data-url="https://app.powerbi.com/reportEmbed?reportId=e06c14b9-1004-46d1-98c4-cf618695ad84&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
             </a>
         </li>
           <br>
@@ -553,7 +623,7 @@ body.sem-fundo::after {
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-seam" viewBox="0 0 16 16">
                 <path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5l2.404.961L10.404 2zm3.564 1.426L5.596 5 8 5.961 14.154 3.5zm3.25 1.7-6.5 2.6v7.922l6.5-2.6V4.24zM7.5 14.762V6.838L1 4.239v7.923zM7.443.184a1.5 1.5 0 0 1 1.114 0l7.129 2.852A.5.5 0 0 1 16 3.5v8.662a1 1 0 0 1-.629.928l-7.185 2.874a.5.5 0 0 1-.372 0L.63 13.09a1 1 0 0 1-.63-.928V3.5a.5.5 0 0 1 .314-.464z"/>
             </svg> Fabricantes
-            <span class="favorite-icon" data-title="Fabricantes" data-url="https://app.powerbi.com/reportEmbed?reportId=68197346-a188-4547-b3f6-60cf368380bf&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+            <span class="favorite-icon" data-title="Fabricantes" data-url="https://app.powerbi.com/reportEmbed?reportId=68197346-a188-4547-b3f6-60cf368380bf&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
           </a>
         </li>
 
@@ -563,7 +633,7 @@ body.sem-fundo::after {
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-seam" viewBox="0 0 16 16">
                 <path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5l2.404.961L10.404 2zm3.564 1.426L5.596 5 8 5.961 14.154 3.5zm3.25 1.7-6.5 2.6v7.922l6.5-2.6V4.24zM7.5 14.762V6.838L1 4.239v7.923zM7.443.184a1.5 1.5 0 0 1 1.114 0l7.129 2.852A.5.5 0 0 1 16 3.5v8.662a1 1 0 0 1-.629.928l-7.185 2.874a.5.5 0 0 1-.372 0L.63 13.09a1 1 0 0 1-.63-.928V3.5a.5.5 0 0 1 .314-.464z"/>
             </svg> Matriz Nine Box
-            <span class="favorite-icon" data-title="Matriz Nine Box" data-url="https://app.powerbi.com/reportEmbed?reportId=931f1b5b-1343-4316-9736-c0591f62e14e&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+            <span class="favorite-icon" data-title="Matriz Nine Box" data-url="https://app.powerbi.com/reportEmbed?reportId=931f1b5b-1343-4316-9736-c0591f62e14e&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
           </a>
         </li>
 
@@ -573,7 +643,7 @@ body.sem-fundo::after {
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-columns-gap" viewBox="0 0 16 16">
             <path d="M6 1v3H1V1zM1 0a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1V1a1 1 0 0 0-1-1zm14 12v3h-5v-3zm-5-1a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1zM6 8v7H1V8zM1 7a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1zm14-6v7h-5V1zm-5-1a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1V1a1 1 0 0 0-1-1z"/>
           </svg> Matriz Cliente / Fabricante
-            <span class="favorite-icon" data-title="Matriz Cliente / Fabricante" data-url="https://app.powerbi.com/reportEmbed?reportId=b71105be-9614-4406-8c32-445e8d987df9&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+            <span class="favorite-icon" data-title="Matriz Cliente / Fabricante" data-url="https://app.powerbi.com/reportEmbed?reportId=b71105be-9614-4406-8c32-445e8d987df9&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
           </a>
         </li>
 
@@ -583,7 +653,7 @@ body.sem-fundo::after {
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-columns-gap" viewBox="0 0 16 16">
             <path d="M6 1v3H1V1zM1 0a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1V1a1 1 0 0 0-1-1zm14 12v3h-5v-3zm-5-1a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1zM6 8v7H1V8zM1 7a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1zm14-6v7h-5V1zm-5-1a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1V1a1 1 0 0 0-1-1z"/>
           </svg> Rentabilidade Fabricantes
-            <span class="favorite-icon" data-title="Rentabilidade Fabricantes" data-url="https://app.powerbi.com/reportEmbed?reportId=9f8928bc-6239-4591-ae1e-1f08ff690276&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+            <span class="favorite-icon" data-title="Rentabilidade Fabricantes" data-url="https://app.powerbi.com/reportEmbed?reportId=9f8928bc-6239-4591-ae1e-1f08ff690276&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
           </a>
         </li>
 
@@ -593,7 +663,7 @@ body.sem-fundo::after {
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bar-chart-fill" viewBox="0 0 16 16">
               <path d="M1 11a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm5-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm5-5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1z"/>
             </svg> Evolução Pipeline 2026 Fabricantes
-              <span class="favorite-icon" data-title="Evolução Pipeline 2026 por Fabricante" data-url="https://app.powerbi.com/reportEmbed?reportId=7c6b6b52-a244-4c59-8eb7-b8b8a9944555&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+              <span class="favorite-icon" data-title="Evolução Pipeline 2026 por Fabricante" data-url="https://app.powerbi.com/reportEmbed?reportId=7c6b6b52-a244-4c59-8eb7-b8b8a9944555&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
           </a>
       </li>
       
@@ -624,7 +694,7 @@ body.sem-fundo::after {
                           <path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6m0 1a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/>
                           <path d="M9.5 8a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0"/>
                         </svg> Gestão Pré-Vendas
-                        <span class="favorite-icon" data-title="Gestão Pré-Vendas" data-url="https://app.powerbi.com/reportEmbed?reportId=8f25e5a6-3ecf-469e-ac99-4f52d944100d&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+                        <span class="favorite-icon" data-title="Gestão Pré-Vendas" data-url="https://app.powerbi.com/reportEmbed?reportId=8f25e5a6-3ecf-469e-ac99-4f52d944100d&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
                       </a>
                     </li>
 
@@ -634,7 +704,7 @@ body.sem-fundo::after {
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark" viewBox="0 0 16 16">
                         <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5z"/>
                         </svg> Certificações Pré-Vendas
-                        <span class="favorite-icon" data-title="Certificações Pré-Vendas" data-url="https://app.powerbi.com/reportEmbed?reportId=59318a47-d338-4f13-b1f2-d7ca3058dbac&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+                        <span class="favorite-icon" data-title="Certificações Pré-Vendas" data-url="https://app.powerbi.com/reportEmbed?reportId=59318a47-d338-4f13-b1f2-d7ca3058dbac&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
                       </a>
                     </li>
                     <br>
@@ -660,7 +730,7 @@ body.sem-fundo::after {
                   <path d="M10 13.5a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-6a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5zm-2.5.5a.5.5 0 0 1-.5-.5v-4a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5zm-3 0a.5.5 0 0 1-.5-.5v-2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5z"/>
                   <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z"/>
                 </svg> Evolução 2023 - 2025
-              <span class="favorite-icon" data-title="Evolução 2023 - 2025" data-url="https://app.powerbi.com/reportEmbed?reportId=df809169-372f-48d2-b1a8-925e773139dd&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+              <span class="favorite-icon" data-title="Evolução 2023 - 2025" data-url="https://app.powerbi.com/reportEmbed?reportId=df809169-372f-48d2-b1a8-925e773139dd&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
             </a>
         </li> -->
 
@@ -670,7 +740,7 @@ body.sem-fundo::after {
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-graph-up" viewBox="0 0 16 16">
                 <path fill-rule="evenodd" d="M0 0h1v15h15v1H0zm14.817 3.113a.5.5 0 0 1 .07.704l-4.5 5.5a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61 4.15-5.073a.5.5 0 0 1 .704-.07"/>
               </svg> Evolução Comercial AM's
-              <span class="favorite-icon" data-title="Evolução Comercial AM's" data-url="https://app.powerbi.com/reportEmbed?reportId=5dba2be2-d068-4e25-8b8c-b47d640340c1&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+              <span class="favorite-icon" data-title="Evolução Comercial AM's" data-url="https://app.powerbi.com/reportEmbed?reportId=5dba2be2-d068-4e25-8b8c-b47d640340c1&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
             </a>
         </li>
 
@@ -681,7 +751,7 @@ body.sem-fundo::after {
                 <path d="M5.5 7a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1zM5 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m0 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5"/>
                 <path d="M9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.5zm0 1v2A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z"/>
               </svg> Base de Clientes
-              <span class="favorite-icon" data-title="Base de Clientes" data-url="https://app.powerbi.com/reportEmbed?reportId=485908f8-87dd-4451-9233-33327bb76b29&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+              <span class="favorite-icon" data-title="Base de Clientes" data-url="https://app.powerbi.com/reportEmbed?reportId=485908f8-87dd-4451-9233-33327bb76b29&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
             </a>
         </li>
                     <br>
@@ -704,7 +774,7 @@ body.sem-fundo::after {
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bar-chart" viewBox="0 0 16 16">
                   <path d="M4 11H2v3h2zm5-4H7v7h2zm5-5v12h-2V2zm-2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM6 7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm-5 4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1z"/>
                 </svg> Sales Executive Summary
-                    <span class="favorite-icon" data-title="Sales Executive Summary" data-url="https://app.powerbi.com/reportEmbed?reportId=de860be6-17e5-4d19-94fd-296bfd67c1b4&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+                    <span class="favorite-icon" data-title="Sales Executive Summary" data-url="https://app.powerbi.com/reportEmbed?reportId=de860be6-17e5-4d19-94fd-296bfd67c1b4&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
               </a>
             </li>
             <br>
@@ -740,7 +810,7 @@ body.sem-fundo::after {
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-diagram-3" viewBox="0 0 16 16">
                             <path fill-rule="evenodd" d="M6 3.5A1.5 1.5 0 0 1 7.5 2h1A1.5 1.5 0 0 1 10 3.5v1A1.5 1.5 0 0 1 8.5 6v1H14a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-1 0V8h-5v.5a.5.5 0 0 1-1 0V8h-5v.5a.5.5 0 0 1-1 0v-1A.5.5 0 0 1 2 7h5.5V6A1.5 1.5 0 0 1 6 4.5zM8.5 5a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5zM0 11.5A1.5 1.5 0 0 1 1.5 10h1A1.5 1.5 0 0 1 4 11.5v1A1.5 1.5 0 0 1 2.5 14h-1A1.5 1.5 0 0 1 0 12.5zm1.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm4.5.5A1.5 1.5 0 0 1 7.5 10h1a1.5 1.5 0 0 1 1.5 1.5v1A1.5 1.5 0 0 1 8.5 14h-1A1.5 1.5 0 0 1 6 12.5zm1.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm4.5.5a1.5 1.5 0 0 1 1.5-1.5h1a1.5 1.5 0 0 1 1.5 1.5v1a1.5 1.5 0 0 1-1.5 1.5h-1a1.5 1.5 0 0 1-1.5-1.5zm1.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0  0-.5-.5z"/>
                         </svg> Resumo C-Level
-                        <span class="favorite-icon" data-title="Resumo C-Level" data-url="https://app.powerbi.com/reportEmbed?reportId=881176ec-4b86-4af2-a234-8a14eac9be80&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+                        <span class="favorite-icon" data-title="Resumo C-Level" data-url="https://app.powerbi.com/reportEmbed?reportId=881176ec-4b86-4af2-a234-8a14eac9be80&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
                       </a>
                     </li>
 
@@ -749,7 +819,7 @@ body.sem-fundo::after {
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bar-chart" viewBox="0 0 16 16">
                           <path d="M4 11H2v3h2zm5-4H7v7h2zm5-5v12h-2V2zm-2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM6 7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm-5 4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1z"/>
                         </svg> Resumo Executivo de Vendas
-                        <span class="favorite-icon" data-title="Resumo Executivo de Vendas" data-url="https://app.powerbi.com/reportEmbed?reportId=e3a1499f-39de-4ec8-8257-414bcb903d53&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+                        <span class="favorite-icon" data-title="Resumo Executivo de Vendas" data-url="https://app.powerbi.com/reportEmbed?reportId=e3a1499f-39de-4ec8-8257-414bcb903d53&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
                       </a>
                     </li>
 
@@ -758,7 +828,7 @@ body.sem-fundo::after {
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-graph-up-arrow" viewBox="0 0 16 16">
                           <path fill-rule="evenodd" d="M0 0h1v15h15v1H0zm10 3.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V4.9l-3.613 4.417a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61L13.445 4H10.5a.5.5 0 0 1-.5-.5"/>
                           </svg> Cadência de Vendas
-                        <span class="favorite-icon" data-title="Cadência de Vendas" data-url="https://app.powerbi.com/reportEmbed?reportId=4bf71bbb-b931-43fa-bd70-a6089c27cdef&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+                        <span class="favorite-icon" data-title="Cadência de Vendas" data-url="https://app.powerbi.com/reportEmbed?reportId=4bf71bbb-b931-43fa-bd70-a6089c27cdef&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
                       </a>
                     </li>
 
@@ -768,7 +838,7 @@ body.sem-fundo::after {
                           <path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v1h14V4a1 1 0 0 0-1-1zm13 4H1v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1z"/>
                           <path d="M2 10a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z"/>
                         </svg> Carteira
-                        <span class="favorite-icon" data-title="Carteira" data-url="https://app.powerbi.com/reportEmbed?reportId=aea0e943-1165-45e6-8206-93807c695370&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+                        <span class="favorite-icon" data-title="Carteira" data-url="https://app.powerbi.com/reportEmbed?reportId=aea0e943-1165-45e6-8206-93807c695370&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
                       </a>
                     </li>
 
@@ -777,7 +847,7 @@ body.sem-fundo::after {
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-activity" viewBox="0 0 16 16">
                           <path fill-rule="evenodd" d="M6 2a.5.5 0 0 1 .47.33L10 12.036l1.53-4.208A.5.5 0 0 1 12 7.5h3.5a.5.5 0 0 1 0 1h-3.15l-1.88 5.17a.5.5 0 0 1-.94 0L6 3.964 4.47 8.171A.5.5 0 0 1 4 8.5H.5a.5.5 0 0 1 0-1h3.15l1.88-5.17A.5.5 0 0 1 6 2"/>
                         </svg> Produtividade
-                        <span class="favorite-icon" data-title="Produtividade" data-url="https://app.powerbi.com/reportEmbed?reportId=d98d8368-0831-4eaa-a086-826445656934&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+                        <span class="favorite-icon" data-title="Produtividade" data-url="https://app.powerbi.com/reportEmbed?reportId=d98d8368-0831-4eaa-a086-826445656934&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
                       </a>
                     </li>
 
@@ -788,7 +858,7 @@ body.sem-fundo::after {
                           <path d="M5 4a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1zm-.5 2.5A.5.5 0 0 1 5 6h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5M5 8a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1zm0 2a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1z"/>
                           <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zm10-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1"/>
                       </svg> Monitoramento Deals
-                        <span class="favorite-icon" data-title="Monitoramento Deals" data-url="https://app.powerbi.com/reportEmbed?reportId=98ae7dcd-e9c7-4d48-bd41-408ee73300b0&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+                        <span class="favorite-icon" data-title="Monitoramento Deals" data-url="https://app.powerbi.com/reportEmbed?reportId=98ae7dcd-e9c7-4d48-bd41-408ee73300b0&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
                       </a>
                     </li>
 
@@ -797,7 +867,7 @@ body.sem-fundo::after {
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-graph-down-arrow" viewBox="0 0 16 16">
                         <path fill-rule="evenodd" d="M0 0h1v15h15v1H0zm10 11.5a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 0-1 0v2.6l-3.613-4.417a.5.5 0 0 0-.74-.037L7.06 8.233 3.404 3.206a.5.5 0 0 0-.808.588l4 5.5a.5.5 0 0 0 .758.06l2.609-2.61L13.445 11H10.5a.5.5 0 0 0-.5.5"/>
                       </svg> Perdidas
-                        <span class="favorite-icon" data-title="Perdidas" data-url="https://app.powerbi.com/reportEmbed?reportId=554f0a08-c609-44ba-855f-9c6e388f79b2&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+                        <span class="favorite-icon" data-title="Perdidas" data-url="https://app.powerbi.com/reportEmbed?reportId=554f0a08-c609-44ba-855f-9c6e388f79b2&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
                       </a>
                     </li>
 
@@ -806,7 +876,7 @@ body.sem-fundo::after {
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-sliders" viewBox="0 0 16 16">
                           <path fill-rule="evenodd" d="M11.5 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M9.05 3a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0V3zM4.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M2.05 8a2.5 2.5 0 0 1 4.9 0H16v1H6.95a2.5 2.5 0 0 1-4.9 0H0V8zm9.45 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3m-2.45 1a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0v-1z"/>
                       </svg> Simulador
-                        <span class="favorite-icon" data-title="Simulador" data-url="https://app.powerbi.com/reportEmbed?reportId=edb48354-5da6-495f-bc9d-c9a9cfad7f06&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+                        <span class="favorite-icon" data-title="Simulador" data-url="https://app.powerbi.com/reportEmbed?reportId=edb48354-5da6-495f-bc9d-c9a9cfad7f06&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
                       </a>
                     </li>
                     <br>
@@ -830,7 +900,7 @@ body.sem-fundo::after {
                           <path d="M1 3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1zm7 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4"/>
                           <path d="M0 5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H1a1 1 0 0 1-1-1zm3 0a2 2 0 0 1-2 2v4a2 2 0 0 1 2 2h10a2 2 0 0 1 2-2V7a2 2 0 0 1-2-2z"/>
                         </svg> Faturamento
-                        <span class="favorite-icon" data-title="Faturamento" data-url="https://app.powerbi.com/reportEmbed?reportId=33181c39-328f-468a-8826-fa6839532246&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+                        <span class="favorite-icon" data-title="Faturamento" data-url="https://app.powerbi.com/reportEmbed?reportId=33181c39-328f-468a-8826-fa6839532246&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
                       </a>
                     </li>
                     <li class="nav-item">
@@ -838,7 +908,7 @@ body.sem-fundo::after {
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-justify" viewBox="0 0 16 16">
                           <path fill-rule="evenodd" d="M2 12.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m0-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m0-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m0-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5"/>
                         </svg> All Hands
-                        <span class="favorite-icon" data-title="All Hands" data-url="https://app.powerbi.com/reportEmbed?reportId=73f00a0c-bb60-4b88-aa5c-ef4e60189e92&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+                        <span class="favorite-icon" data-title="All Hands" data-url="https://app.powerbi.com/reportEmbed?reportId=73f00a0c-bb60-4b88-aa5c-ef4e60189e92&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
                       </a>
                     </li>
                     <br>
@@ -861,7 +931,7 @@ body.sem-fundo::after {
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-seam" viewBox="0 0 16 16">
                           <path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5l2.404.961L10.404 2zm3.564 1.426L5.596 5 8 5.961 14.154 3.5zm3.25 1.7-6.5 2.6v7.922l6.5-2.6V4.24zM7.5 14.762V6.838L1 4.239v7.923zM7.443.184a1.5 1.5 0 0 1 1.114 0l7.129 2.852A.5.5 0 0 1 16 3.5v8.662a1 1 0 0 1-.629.928l-7.185 2.874a.5.5 0 0 1-.372 0L.63 13.09a1 1 0 0 1-.63-.928V3.5a.5.5 0 0 1 .314-.464z"/>
                         </svg> Fabricantes
-                        <span class="favorite-icon" data-title="Fabricantes" data-url="https://app.powerbi.com/reportEmbed?reportId=be0af509-98a3-4d24-8adb-ef08d00cb218&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+                        <span class="favorite-icon" data-title="Fabricantes" data-url="https://app.powerbi.com/reportEmbed?reportId=be0af509-98a3-4d24-8adb-ef08d00cb218&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
                       </a>
                     </li>
                     <br>
@@ -887,7 +957,7 @@ body.sem-fundo::after {
                           <path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6m0 1a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/>
                           <path d="M9.5 8a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0"/>
                         </svg> Metas
-                        <span class="favorite-icon" data-title="Metas Pré-vendas" data-url="https://app.powerbi.com/reportEmbed?reportId=c299b655-a069-4106-9972-3cf1dfacc64f&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+                        <span class="favorite-icon" data-title="Metas Pré-vendas" data-url="https://app.powerbi.com/reportEmbed?reportId=c299b655-a069-4106-9972-3cf1dfacc64f&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
                       </a>
                     </li>
 
@@ -899,7 +969,7 @@ body.sem-fundo::after {
                           <path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6m0 1a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/>
                           <path d="M9.5 8a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0"/>
                         </svg> Meta Gerencial
-                        <span class="favorite-icon" data-title="Meta Gerencial Pré-vendas" data-url="https://app.powerbi.com/reportEmbed?reportId=3ae442ee-3359-4ce9-aef0-2e86f555e42b&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+                        <span class="favorite-icon" data-title="Meta Gerencial Pré-vendas" data-url="https://app.powerbi.com/reportEmbed?reportId=3ae442ee-3359-4ce9-aef0-2e86f555e42b&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
                       </a>
                     </li>
 
@@ -926,7 +996,7 @@ body.sem-fundo::after {
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pie-chart" viewBox="0 0 16 16">
                             <path d="M7.5 1.018a7 7 0 0 0-4.79 11.566L7.5 7.793zm1 0V7.5h6.482A7 7 0 0 0 8.5 1.018M14.982 8.5H8.207l-4.79 4.79A7 7 0 0 0 14.982 8.5M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8"/>
                           </svg> Comercial BR
-                        <span class="favorite-icon" data-title="Comercial BR" data-url="https://app.powerbi.com/reportEmbed?reportId=e68459f5-d9df-49fa-9b29-6e831499729c&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+                        <span class="favorite-icon" data-title="Comercial BR" data-url="https://app.powerbi.com/reportEmbed?reportId=e68459f5-d9df-49fa-9b29-6e831499729c&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
                       </a>
                     </li>
 
@@ -935,7 +1005,7 @@ body.sem-fundo::after {
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pie-chart" viewBox="0 0 16 16">
                             <path d="M7.5 1.018a7 7 0 0 0-4.79 11.566L7.5 7.793zm1 0V7.5h6.482A7 7 0 0 0 8.5 1.018M14.982 8.5H8.207l-4.79 4.79A7 7 0 0 0 14.982 8.5M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8"/>
                           </svg> Comercial US
-                        <span class="favorite-icon" data-title="Comercial US" data-url="https://app.powerbi.com/reportEmbed?reportId=fb118903-c5ef-4073-8932-f924fe964ecb&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+                        <span class="favorite-icon" data-title="Comercial US" data-url="https://app.powerbi.com/reportEmbed?reportId=fb118903-c5ef-4073-8932-f924fe964ecb&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
                       </a>
                     </li>
 
@@ -959,7 +1029,7 @@ body.sem-fundo::after {
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bar-chart" viewBox="0 0 16 16">
                   <path d="M4 11H2v3h2zm5-4H7v7h2zm5-5v12h-2V2zm-2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM6 7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm-5 4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1z"/>
                 </svg> Sales Executive Summary
-                    <span class="favorite-icon" data-title="Sales Executive Summary" data-url="https://app.powerbi.com/reportEmbed?reportId=de860be6-17e5-4d19-94fd-296bfd67c1b4&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)">★</span>
+                    <span class="favorite-icon" data-title="Sales Executive Summary" data-url="https://app.powerbi.com/reportEmbed?reportId=de860be6-17e5-4d19-94fd-296bfd67c1b4&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" onclick="toggleFavorite(event,this)"></span>
               </a>
             </li>
             <br>
@@ -1010,7 +1080,10 @@ body.sem-fundo::after {
         </div>
           <br><br>
           <div class="responsive-iframe-container">
-            <iframe id="powerbi-frame" src="https://app.powerbi.com/reportEmbed?reportId=6f55fb9b-386d-4161-9738-5ba33c28e08c&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" frameborder="0" allowFullScreen="true"></iframe>
+            <div class="report-loading" id="report-loading" aria-hidden="true">
+              <div class="report-spinner"></div>
+            </div>
+            <iframe id="powerbi-frame" src="https://app.powerbi.com/reportEmbed?reportId=6f55fb9b-386d-4161-9738-5ba33c28e08c&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1" frameborder="0" allowFullScreen="true" onload="hideReportLoading()"></iframe>
           </div>
         </main>
       </div>
@@ -1039,6 +1112,13 @@ body.sem-fundo::after {
       return cleanName.split(/[._\s]+/).map(word =>
         word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
       ).join(' ');
+    }
+
+    // Retorna a chave de localStorage dos favoritos, vinculada ao usuário logado
+    // (evita que favoritos se misturem em máquinas compartilhadas)
+    function getFavoritesKey() {
+      const userName = localStorage.getItem('userName');
+      return userName ? `userFavorites_${userName}` : 'userFavorites';
     }
 
     // Preenche campo de e-mail com último login (mas NÃO faz login automático)
@@ -1146,7 +1226,7 @@ body.sem-fundo::after {
       const url = element.getAttribute('data-url');
       const favorite = { title, url };
       
-      let favorites = JSON.parse(localStorage.getItem('userFavorites') || '[]');
+      let favorites = JSON.parse(localStorage.getItem(getFavoritesKey()) || '[]');
       const existingIndex = favorites.findIndex(fav => fav.url === url);
       
       if (existingIndex > -1) {
@@ -1161,13 +1241,13 @@ body.sem-fundo::after {
         swal("Adicionado!", `${title} foi adicionado aos favoritos`, "success");
       }
       
-      localStorage.setItem('userFavorites', JSON.stringify(favorites));
+      localStorage.setItem(getFavoritesKey(), JSON.stringify(favorites));
       loadUserFavorites();
     }
 
     // Função para carregar favoritos do usuário
     function loadUserFavorites() {
-      const favorites = JSON.parse(localStorage.getItem('userFavorites') || '[]');
+      const favorites = JSON.parse(localStorage.getItem(getFavoritesKey()) || '[]');
       const favoritesMenu = document.getElementById('favorites-menu');
       
       favoritesMenu.innerHTML = '';
@@ -1198,7 +1278,7 @@ body.sem-fundo::after {
 
     // Função para atualizar o estado visual das estrelas
     function updateFavoriteStars() {
-      const favorites = JSON.parse(localStorage.getItem('userFavorites') || '[]');
+      const favorites = JSON.parse(localStorage.getItem(getFavoritesKey()) || '[]');
       const favoriteUrls = favorites.map(fav => fav.url);
 
       document.querySelectorAll('.favorite-icon').forEach(icon => {
@@ -1325,6 +1405,9 @@ function loadReport(title, url, element) {
         return;
     }
 
+    // Mostra spinner enquanto o novo relatório carrega
+    showReportLoading();
+
     iframe.src = url;
 
     const reportTitle = document.getElementById('report-title');
@@ -1333,19 +1416,51 @@ function loadReport(title, url, element) {
         reportTitle.textContent = title;
     }
 
-    // Remove seleção anterior
+    // Remove seleção anterior (classe visual + aria-current)
     document.querySelectorAll('.nav-link').forEach(link => {
         const onclick = link.getAttribute('onclick') || '';
 
         if (onclick.includes('loadReport')) {
             link.classList.remove('active');
+            link.removeAttribute('aria-current');
         }
     });
 
     // Seleciona o atual
     if (element) {
         element.classList.add('active');
+        element.setAttribute('aria-current', 'page');
     }
+
+    // Fecha o menu mobile automaticamente ao escolher um relatório
+    if (window.innerWidth < 768) {
+        toggleSidebar(false);
+    }
+}
+
+// Controle do spinner de carregamento do relatório
+function showReportLoading() {
+    const loading = document.getElementById('report-loading');
+    if (loading) loading.classList.remove('hidden');
+}
+
+function hideReportLoading() {
+    const loading = document.getElementById('report-loading');
+    if (loading) loading.classList.add('hidden');
+}
+
+// Controle do menu mobile (off-canvas)
+function toggleSidebar(forceState) {
+    const sidebar = document.getElementById('main-sidebar');
+    const backdrop = document.getElementById('sidebar-backdrop');
+    const toggleBtn = document.getElementById('sidebar-toggle');
+    if (!sidebar) return;
+
+    const shouldOpen = typeof forceState === 'boolean' ? forceState : !sidebar.classList.contains('open');
+
+    sidebar.classList.toggle('open', shouldOpen);
+    if (backdrop) backdrop.classList.toggle('open', shouldOpen);
+    if (toggleBtn) toggleBtn.setAttribute('aria-expanded', String(shouldOpen));
 }
 
 
@@ -1367,7 +1482,7 @@ function toggleFavorite(event, element) {
     };
 
     let favorites = JSON.parse(
-        localStorage.getItem('userFavorites') || '[]'
+        localStorage.getItem(getFavoritesKey()) || '[]'
     );
 
     const existingIndex = favorites.findIndex(
@@ -1400,7 +1515,7 @@ function toggleFavorite(event, element) {
     }
 
     localStorage.setItem(
-        'userFavorites',
+        getFavoritesKey(),
         JSON.stringify(favorites)
     );
 
