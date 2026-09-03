@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -25,7 +26,7 @@
     .responsive-iframe-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
     .sidebar-heading-sm { font-size: 0.72rem; text-transform: uppercase; font-weight: 600; color: #6c757d; padding-left: 1rem; margin-top: 1.5rem; margin-bottom: 0.5rem; }
     .navbar h5 {margin: 0 auto;text-align: center;}
-    
+
     /* Novos estilos para favoritos */
     .favorite-icon {
       float: right;
@@ -52,6 +53,19 @@
       margin-bottom: 10px;
       font-weight: 600;
       color: #007b6e;
+    }
+    /* Badge mostrando a área/perfil atualmente exibido */
+    .current-profile-badge {
+      margin: -6px 15px 10px;
+      padding: 3px 10px;
+      display: inline-block;
+      background: #e0f3f3;
+      color: #007b6e;
+      font-size: 10.5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+      border-radius: 20px;
     }
     /* Estilos para a barra de busca */
     .search-container {
@@ -201,6 +215,78 @@
     button:hover {
       background-color: #005e63;
       transform: scale(1.03);
+    }
+
+    /* Botões de perfil renderizados dinamicamente a partir de PROFILES */
+    #profile-buttons button {
+      margin-top: 10px;
+    }
+
+    /* Modal de troca de área */
+    .profile-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .profile-modal-overlay.open {
+      display: flex;
+    }
+    .profile-modal-card {
+      position: relative;
+      background: #fff;
+      border-radius: 14px;
+      padding: 30px 32px;
+      max-width: 380px;
+      width: calc(100% - 40px);
+      text-align: center;
+      box-shadow: 0 12px 30px rgba(0,0,0,.2);
+      animation: fadeIn .25s ease;
+    }
+    .profile-modal-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #2c3e50;
+      margin-bottom: 4px;
+    }
+    .profile-modal-subtitle {
+      font-size: .8rem;
+      color: #6c757d;
+      margin-bottom: 18px;
+    }
+    .profile-modal-close {
+      position: absolute;
+      top: 10px;
+      right: 14px;
+      background: none;
+      border: none;
+      font-size: 22px;
+      line-height: 1;
+      color: #999;
+      cursor: pointer;
+      padding: 0;
+      width: auto;
+      margin-top: 0;
+    }
+    .profile-modal-close:hover {
+      color: #333;
+      background: none;
+      transform: none;
+    }
+    #profile-modal-buttons button {
+      margin-top: 10px;
+    }
+    #profile-modal-buttons button.current-profile {
+      background-color: #e0f3f3;
+      color: #007b6e;
+      cursor: default;
+    }
+    #profile-modal-buttons button.current-profile:hover {
+      background-color: #e0f3f3;
+      transform: none;
     }
 
     @keyframes fadeIn {
@@ -385,14 +471,35 @@ body.sem-fundo::after {
       <h6 class="h4 mb-3 font-weight-normal">Portal Asper Intelligence</h6>
       <input type="email" class="form-control" id="username" placeholder="Seu email" required>
       <br>
-  <button type="button" onclick="logar_email('corporate')">Sales Corporate</button>
-  <button type="button" onclick="logar_email('strategic')">Sales Strategic</button>
-  <button type="button" onclick="logar_email('revops')">Sales Intelligence</button>
+      <!--
+        Os botões de área/perfil são renderizados dinamicamente a partir do array
+        PROFILES (ver <script> mais abaixo). Isso é só uma escolha de contexto de
+        navegação feita pela própria pessoa (não é autenticação nem carrega dado
+        de ninguém) — para adicionar uma nova diretoria, basta incluir um novo
+        objeto em PROFILES, sem tocar neste HTML.
+      -->
+      <div id="profile-buttons"></div>
     </form>
   </div>
 </div>
 <!-- FIM DO BLOCO TELA LOGIN -->
 
+<!-- INICIO DO MODAL DE TROCA DE ÁREA -->
+<!--
+  Popup simples para trocar de área sem sair do portal. Os botões são
+  renderizados dinamicamente a partir do mesmo array PROFILES usado na tela
+  de login (ver <script> mais abaixo) — não há dado de usuário aqui, só a
+  lista de diretorias disponíveis.
+-->
+<div class="profile-modal-overlay" id="profile-modal-overlay" onclick="if(event.target===this) closeProfileModal();">
+  <div class="profile-modal-card" role="dialog" aria-modal="true" aria-labelledby="profile-modal-title">
+    <button type="button" class="profile-modal-close" aria-label="Fechar" onclick="closeProfileModal()">×</button>
+    <h6 id="profile-modal-title" class="profile-modal-title">Trocar de perfil</h6>
+    <p class="profile-modal-subtitle">Selecione o perfil que deseja visualizar</p>
+    <div id="profile-modal-buttons"></div>
+  </div>
+</div>
+<!-- FIM DO MODAL DE TROCA DE ÁREA -->
 
 <!-- INICIO PORTAL -->
   <div id="portal-screen" style="display:none;">
@@ -415,6 +522,7 @@ body.sem-fundo::after {
     </div>
 
     <div class="user-sidebar" id="user-sidebar"></div>
+    <div class="current-profile-badge" id="current-profile-badge"></div>
 
     <div class="search-container">
       <div style="position: relative;">
@@ -451,6 +559,7 @@ body.sem-fundo::after {
     <ul class="nav flex-column">
       <li class="nav-item px-1">
         <div class="year-tabs" role="tablist" aria-label="Selecionar ano dos relatórios">
+          <!-- <button type="button" class="year-tab active" data-year="2027" role="tab" aria-selected="true" onclick="selectReportYear('2027', this)">2027</button> -->
           <button type="button" class="year-tab active" data-year="2026" role="tab" aria-selected="true" onclick="selectReportYear('2026', this)">2026</button>
           <button type="button" class="year-tab" data-year="2025" role="tab" aria-selected="false" onclick="selectReportYear('2025', this)">2025</button>
         </div>
@@ -459,8 +568,16 @@ body.sem-fundo::after {
     <div id="year-reports-container"></div>
 <!-- FIM DO BLOCO MENU PARA SELECIONAR O ANO -->
 
-<!-- BLOCO SAIR -->
+<!-- BLOCO TROCAR DE ÁREA / SAIR -->
 <ul class="nav flex-column mt-2">
+      <!-- <li class="nav-item">
+          <a class="nav-link" href="#" onclick="switchProfile(); return false;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-repeat" viewBox="0 0 16 16">
+                <path d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41m-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9"/>
+                <path fill-rule="evenodd" d="M8 3c-1.552 0-2.94.707-3.857 1.818a.5.5 0 1 1-.771-.636A6.002 6.002 0 0 1 13.917 7H12.9A5 5 0 0 0 8 3M3.1 9a5.002 5.002 0 0 0 8.757 2.182.5.5 0 1 1 .771.636A6.002 6.002 0 0 1 2.083 9z"/>
+              </svg> Trocar de Perfil
+          </a>
+      </li> -->
       <li class="nav-item">
           <a class="nav-link" href="#" onclick="logout()">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
@@ -472,7 +589,7 @@ body.sem-fundo::after {
             </ul>
   </div>
 </nav>
-<!-- FIM DO BLOCO SAIR -->
+<!-- FIM DO BLOCO TROCAR DE ÁREA / SAIR -->
 
 <!-- BLOCO IFRAME CARREGA O RELATORIO INICIAL -->
   <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-4">
@@ -500,7 +617,78 @@ body.sem-fundo::after {
   <script>
 
 // FUNÇÃO QUE EXTRAI O NOME DO USUARIO LOGADO
-let portalMode = 'corporate';
+let portalMode = null;
+let currentProfile = null; // objeto de PROFILES escolhido no login
+let currentYear = '2026';  // ano atualmente selecionado no menu de relatórios
+
+// ============================================
+// PERFIS / DIRETORIAS
+// ============================================
+// Cada perfil é só uma "lente" de navegação: define qual relatório abre por
+// padrão e quais pastas de REPORTS_BY_YEAR aparecem no menu lateral.
+// Isso NÃO é controle de acesso — quem garante isso é o próprio Power BI
+// (autoAuth=true usa a sessão Azure AD real do usuário; RLS e permissões de
+// compartilhamento do relatório são a barreira de segurança de verdade).
+// Para adicionar uma nova diretoria, basta incluir mais um objeto abaixo —
+// "folders" precisa bater com o campo "name" das pastas em REPORTS_BY_YEAR.
+const PROFILES = [
+  {
+    id: 'corporate',
+    label: 'Sales Corporate',
+    defaultReport: {
+      title: 'Cadência de Vendas - Corporate',
+      url: 'https://app.powerbi.com/reportEmbed?reportId=6f55fb9b-386d-4161-9738-5ba33c28e08c&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1'
+    },
+    folders: ['Sales Corporate', 'Alianças', 'Pré-vendas','Sales Intelligence', 'Sales Ops']
+  },
+  {
+    id: 'strategic',
+    label: 'Sales Strategic',
+    defaultReport: {
+      title: 'Cadência de Vendas - Strategic',
+      url: 'https://app.powerbi.com/reportEmbed?reportId=71884cc2-59f1-4d0e-8652-163d35ea7dba&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1'
+    },
+    folders: ['Sales Strategic', 'Alianças', 'Pré-vendas', 'Sales Intelligence', 'Sales Ops']
+  },
+  {
+    id: 'revops',
+    label: 'Rev Ops',
+    defaultReport: {
+      title: 'Cadência de Vendas - Sales Intelligence',
+      url: 'https://app.powerbi.com/reportEmbed?reportId=71884cc2-59f1-4d0e-8652-163d35ea7dba&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1'
+    },
+    folders: ['Sales Intelligence', 'Sales Ops', 'Alianças', 'Pré-vendas', 'Análises Diretoria', 'Asper USA']
+  }
+  // Exemplo de 4ª diretoria (é só descomentar e ajustar):
+  // {
+  //   id: 'prevendas',
+  //   label: 'Pré-vendas',
+  //   defaultReport: {
+  //     title: 'Gestão Pré-Vendas',
+  //     url: 'https://app.powerbi.com/reportEmbed?reportId=8f25e5a6-3ecf-469e-ac99-4f52d944100d&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1'
+  //   },
+  //   folders: ['Pré-vendas']
+  // }
+];
+
+// RENDERIZA OS BOTÕES DE PERFIL NA TELA DE LOGIN A PARTIR DE PROFILES
+function renderProfileButtons() {
+  const container = document.getElementById('profile-buttons');
+  if (!container) return;
+  container.innerHTML = PROFILES.map(p =>
+    `<button type="button" onclick="logar_email('${p.id}')">${p.label}</button>`
+  ).join('');
+}
+
+// RENDERIZA OS BOTÕES DE PERFIL DENTRO DO MODAL DE TROCA DE ÁREA
+function renderProfileModalButtons() {
+  const container = document.getElementById('profile-modal-buttons');
+  if (!container) return;
+  container.innerHTML = PROFILES.map(p => {
+    const isCurrent = currentProfile && currentProfile.id === p.id;
+    return `<button type="button" class="${isCurrent ? 'current-profile' : ''}" onclick="selectProfileFromModal('${p.id}')">${p.label}${isCurrent ? ' (atual)' : ''}</button>`;
+  }).join('');
+}
 
     function extractNameFromEmail(email) {
       const atIndex = email.indexOf('@');
@@ -526,7 +714,7 @@ let portalMode = 'corporate';
       }
     }
 
-// FUNÇÃO QUE VALIDA O EMAIL, REGISTRA O LOGIN E DIRECIONA O USUARIO CONFORME A SELEÇÃO NO LOGIN
+// FUNÇÃO QUE VALIDA O EMAIL, REGISTRA O LOGIN E DIRECIONA O USUARIO CONFORME O PERFIL ESCOLHIDO
 function logar_email(tipo) {
   const email = document.getElementById('username').value.trim();
     if (!email) {
@@ -536,35 +724,32 @@ function logar_email(tipo) {
       if (!email.toLowerCase().endsWith('@asper.tec.br')) {
         swal("Email inválido", "Por favor, digite um email válido", "error");return;
           }
-portalMode = tipo;
+
+  const profile = PROFILES.find(p => p.id === tipo);
+  if (!profile) {
+    swal("Erro", "Perfil não encontrado.", "error");
+    return;
+  }
+
+  portalMode = tipo;
+  currentProfile = profile;
   const userName = extractNameFromEmail(email);
   localStorage.setItem('userEmail', email);
   localStorage.setItem('userName', userName);
   localStorage.setItem('isLoggedIn', 'true');
-  localStorage.setItem('portalMode', tipo);
+  localStorage.setItem('portalMode', tipo); // conveniência de UX, não é controle de acesso
   document.body.classList.add("sem-fundo");
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('portal-screen').style.display = 'block';
   updateUserInterface(userName);
+  updateProfileBadge();
   loadUserFavorites();
   updateFavoriteStars();
-  if (tipo === 'corporate') {
-loadReport(
-'Cadência de Vendas - Corporate',
-'https://app.powerbi.com/reportEmbed?reportId=6f55fb9b-386d-4161-9738-5ba33c28e08c&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1'
-);
-} else if (tipo === 'strategic') {
-loadReport(
-'Cadência de Vendas - Strategic',
-'https://app.powerbi.com/reportEmbed?reportId=ce20a78b-71d8-4e4f-9939-48aa368574f4&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1'
-);
-} else if (tipo === 'revops') {
-loadReport(
-'Cadência de Vendas - Sales Intelligence',
-'https://app.powerbi.com/reportEmbed?reportId=71884cc2-59f1-4d0e-8652-163d35ea7dba&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1'
-);
-}
-swal(
+
+  loadReport(profile.defaultReport.title, profile.defaultReport.url);
+  renderYearMenu(currentYear); // já filtra as pastas pelo currentProfile
+
+  swal(
 "Login realizado!",
 `Bem-vindo, ${userName}!`,
 "success"
@@ -576,12 +761,57 @@ swal(
       document.getElementById('user-sidebar').textContent = userName;
     }
 
+// ATUALIZA O SELO NA SIDEBAR MOSTRANDO QUAL ÁREA/PERFIL ESTÁ SENDO EXIBIDO
+    function updateProfileBadge() {
+      const badge = document.getElementById('current-profile-badge');
+      if (!badge) return;
+      badge.textContent = currentProfile ? currentProfile.label : '';
+      badge.style.display = currentProfile ? 'inline-block' : 'none';
+    }
+
+// ABRE O POPUP DE TROCA DE ÁREA SEM SAIR DO PORTAL (usuário continua logado,
+// só escolhe outra diretoria para filtrar o menu e o relatório inicial)
+    function switchProfile() {
+      renderProfileModalButtons();
+      const overlay = document.getElementById('profile-modal-overlay');
+      if (overlay) overlay.classList.add('open');
+    }
+
+    function closeProfileModal() {
+      const overlay = document.getElementById('profile-modal-overlay');
+      if (overlay) overlay.classList.remove('open');
+    }
+
+// APLICA O PERFIL ESCOLHIDO NO POPUP, SEM RECARREGAR A TELA DE LOGIN
+    function selectProfileFromModal(tipo) {
+      const profile = PROFILES.find(p => p.id === tipo);
+      if (!profile) return;
+
+      if (currentProfile && currentProfile.id === profile.id) {
+        closeProfileModal();
+        return;
+      }
+
+      portalMode = tipo;
+      currentProfile = profile;
+      localStorage.setItem('portalMode', tipo); // conveniência de UX, não é controle de acesso
+
+      loadReport(profile.defaultReport.title, profile.defaultReport.url);
+      renderYearMenu(currentYear);
+      updateProfileBadge();
+      closeProfileModal();
+
+      swal("Área alterada!", `Agora exibindo: ${profile.label}`, "success");
+    }
+
 // FUNÇÃO DE LOGOUT - ENCERRA A SESSAO E LIMPA DADOS DE LOGIN
     function logout() {
       document.body.classList.remove("sem-fundo");
       const lastEmail = localStorage.getItem('userEmail') || '';
       localStorage.removeItem('userName');
       localStorage.removeItem('isLoggedIn');
+      currentProfile = null;
+      portalMode = null;
       document.getElementById('portal-screen').style.display = 'none';
       document.getElementById('login-screen').style.display = 'flex';
       document.getElementById('username').value = lastEmail;
@@ -727,28 +957,34 @@ swal(
       }
     });
 
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeProfileModal();
+    });
+
 // ============================================
 // ÁRVORE DE RELATÓRIOS POR ANO 
 // ============================================
+ 
 
-//ALTERNA ABA DE ANO
 const REPORTS_BY_YEAR = {
-  "2026": [
+
+// INICIO DO BLOCO 2027
+"2027": [
     {
       "name": "Sales Corporate",
-      "collapse_id": "comercialPrivadoMenu2026",
+      "collapse_id": "comercialPrivadoMenu2027",
       "reports": [
         {
-          "title": "Resumo de Vendas - Corporate",
+          "title": "Resumo Executivo de Vendas",
           "url": "https://app.powerbi.com/reportEmbed?reportId=6a57df5d-f9d0-4204-afb5-654150d91c67&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
           "svg": "<svg class=\"bi bi-bar-chart\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M4 11H2v3h2zm5-4H7v7h2zm5-5v12h-2V2zm-2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM6 7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm-5 4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1z\"></path></svg>",
-          "data_title": "Resumo de Vendas - Corporate"
+          "data_title": "Resumo Executivo de Vendas"
         },
         {
-          "title": "Cadência de Vendas - Corporate",
+          "title": "Cadência de Vendas",
           "url": "https://app.powerbi.com/reportEmbed?reportId=6f55fb9b-386d-4161-9738-5ba33c28e08c&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
           "svg": "<svg class=\"bi bi-graph-up-arrow\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M0 0h1v15h15v1H0zm10 3.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V4.9l-3.613 4.417a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61L13.445 4H10.5a.5.5 0 0 1-.5-.5\" fill-rule=\"evenodd\"></path></svg>",
-          "data_title": "Cadência de Vendas - Corporate"
+          "data_title": "Cadência de Vendas"
         },
         {
           "title": "Evolução Pipeline 2026",
@@ -769,16 +1005,16 @@ const REPORTS_BY_YEAR = {
       "collapse_id": "comercialstrategicMenu2026",
       "reports": [
         {
-          "title": "Resumo de Vendas - Strategic",
+          "title": "Resumo de Vendas",
           "url": "https://app.powerbi.com/reportEmbed?reportId=47eac4ff-fd79-44e7-a338-16d792f3a2b1&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
           "svg": "<svg class=\"bi bi-bar-chart\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M4 11H2v3h2zm5-4H7v7h2zm5-5v12h-2V2zm-2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM6 7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm-5 4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1z\"></path></svg>",
-          "data_title": "Resumo de Vendas - Strategic"
+          "data_title": "Resumo Executivo de Vendas"
         },
         {
-          "title": "Cadência de Vendas - Strategic",
+          "title": "Acompanhamento Comercial",
           "url": "https://app.powerbi.com/reportEmbed?reportId=ce20a78b-71d8-4e4f-9939-48aa368574f4&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
           "svg": "<svg class=\"bi bi-graph-up-arrow\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M0 0h1v15h15v1H0zm10 3.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V4.9l-3.613 4.417a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61L13.445 4H10.5a.5.5 0 0 1-.5-.5\" fill-rule=\"evenodd\"></path></svg>",
-          "data_title": "Cadência de Vendas - Strategic"
+          "data_title": "Acompanhamento Comercial"
         },
         {
           "title": "Pipeline - Concentração e Risco",
@@ -793,19 +1029,7 @@ const REPORTS_BY_YEAR = {
       "name": "Sales Intelligence",
       "collapse_id": "asperintelligence",
       "reports": [
-              {
-          "title": "Cadência de Vendas",
-          "url": "https://app.powerbi.com/reportEmbed?reportId=71884cc2-59f1-4d0e-8652-163d35ea7dba&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
-          "svg": "<svg class=\"bi bi-graph-up-arrow\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M0 0h1v15h15v1H0zm10 3.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V4.9l-3.613 4.417a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61L13.445 4H10.5a.5.5 0 0 1-.5-.5\" fill-rule=\"evenodd\"></path></svg>",
-          "data_title": "Cadência de Vendas"
-        },
-          {
-          "title": "Resumo de Vendas",
-          "url": "https://app.powerbi.com/reportEmbed?reportId=eb86d888-f492-43b4-a48c-bb40aacd5393&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
-          "svg": "<svg class=\"bi bi-bar-chart\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M4 11H2v3h2zm5-4H7v7h2zm5-5v12h-2V2zm-2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM6 7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm-5 4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1z\"></path></svg>",
-          "data_title": "Resumo de Vendas - Corporate"
-        },
-          {
+                {
           "title": "Resumo C-Level",
           "url": "https://app.powerbi.com/reportEmbed?reportId=9724d56e-3aa2-4a68-a3f0-d80b83245a8a&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
           "svg": "<svg class=\"bi bi-diagram-3\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M6 3.5A1.5 1.5 0 0 1 7.5 2h1A1.5 1.5 0 0 1 10 3.5v1A1.5 1.5 0 0 1 8.5 6v1H14a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-1 0V8h-5v.5a.5.5 0 0 1-1 0V8h-5v.5a.5.5 0 0 1-1 0v-1A.5.5 0 0 1 2 7h5.5V6A1.5 1.5 0 0 1 6 4.5zM8.5 5a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5zM0 11.5A1.5 1.5 0 0 1 1.5 10h1A1.5 1.5 0 0 1 4 11.5v1A1.5 1.5 0 0 1 2.5 14h-1A1.5 1.5 0 0 1 0 12.5zm1.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm4.5.5A1.5 1.5 0 0 1 7.5 10h1a1.5 1.5 0 0 1 1.5 1.5v1A1.5 1.5 0 0 1 8.5 14h-1A1.5 1.5 0 0 1 6 12.5zm1.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm4.5.5a1.5 1.5 0 0 1 1.5-1.5h1a1.5 1.5 0 0 1 1.5 1.5v1a1.5 1.5 0 0 1-1.5 1.5h-1a1.5 1.5 0 0 1-1.5-1.5zm1.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5z\" fill-rule=\"evenodd\"></path></svg>",
@@ -866,8 +1090,7 @@ const REPORTS_BY_YEAR = {
           "url": "https://app.powerbi.com/reportEmbed?reportId=e06c14b9-1004-46d1-98c4-cf618695ad84&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
           "svg": "<svg class=\"bi bi-file-earmark-text\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M5.5 7a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1zM5 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m0 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5\"></path><path d=\"M9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.5zm0 1v2A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z\"></path></svg>",
           "data_title": "Base de Vendas"
-        },
-        
+        }
       ]
     },
     {
@@ -930,13 +1153,223 @@ const REPORTS_BY_YEAR = {
       "reports": [
         {
           "title": "Sales Executive Summary",
-          "url": "",
+          "url": "https://app.powerbi.com/reportEmbed?reportId=de860be6-17e5-4d19-94fd-296bfd67c1b4&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
           "svg": "<svg class=\"bi bi-bar-chart\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M4 11H2v3h2zm5-4H7v7h2zm5-5v12h-2V2zm-2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM6 7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm-5 4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1z\"></path></svg>",
           "data_title": "Sales Executive Summary"
         }
       ]
     }
   ],
+  // FIM DO BLOCO 2027
+
+
+  // INICIO DO BLOCO 2026
+  "2026": [
+    {
+      "name": "Sales Corporate",
+      "collapse_id": "comercialPrivadoMenu2026",
+      "reports": [
+        {
+          "title": "Resumo Executivo de Vendas",
+          "url": "https://app.powerbi.com/reportEmbed?reportId=6a57df5d-f9d0-4204-afb5-654150d91c67&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
+          "svg": "<svg class=\"bi bi-bar-chart\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M4 11H2v3h2zm5-4H7v7h2zm5-5v12h-2V2zm-2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM6 7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm-5 4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1z\"></path></svg>",
+          "data_title": "Resumo Executivo de Vendas"
+        },
+        {
+          "title": "Cadência de Vendas",
+          "url": "https://app.powerbi.com/reportEmbed?reportId=6f55fb9b-386d-4161-9738-5ba33c28e08c&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
+          "svg": "<svg class=\"bi bi-graph-up-arrow\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M0 0h1v15h15v1H0zm10 3.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V4.9l-3.613 4.417a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61L13.445 4H10.5a.5.5 0 0 1-.5-.5\" fill-rule=\"evenodd\"></path></svg>",
+          "data_title": "Cadência de Vendas"
+        },
+        {
+          "title": "Evolução Pipeline 2026",
+          "url": "https://app.powerbi.com/reportEmbed?reportId=b1301d5c-5c3f-404d-841b-c1f204273df5&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
+          "svg": "<svg class=\"bi bi-bar-chart-fill\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M1 11a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm5-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm5-5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1z\"></path></svg>",
+          "data_title": "Evolução Pipeline 2026"
+        },
+        {
+          "title": "Evolução Comercial Account Manager",
+          "url": "https://app.powerbi.com/reportEmbed?reportId=5dba2be2-d068-4e25-8b8c-b47d640340c1&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
+          "svg": "<svg class=\"bi bi-graph-up\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M0 0h1v15h15v1H0zm14.817 3.113a.5.5 0 0 1 .07.704l-4.5 5.5a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61 4.15-5.073a.5.5 0 0 1 .704-.07\" fill-rule=\"evenodd\"></path></svg>",
+          "data_title": "Evolução Comercial AM's"
+        }
+      ]
+    },
+    {
+      "name": "Sales Strategic",
+      "collapse_id": "comercialstrategicMenu2026",
+      "reports": [
+        {
+          "title": "Resumo de Vendas",
+          "url": "https://app.powerbi.com/reportEmbed?reportId=47eac4ff-fd79-44e7-a338-16d792f3a2b1&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
+          "svg": "<svg class=\"bi bi-bar-chart\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M4 11H2v3h2zm5-4H7v7h2zm5-5v12h-2V2zm-2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM6 7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm-5 4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1z\"></path></svg>",
+          "data_title": "Resumo Executivo de Vendas"
+        },
+        {
+          "title": "Acompanhamento Comercial",
+          "url": "https://app.powerbi.com/reportEmbed?reportId=ce20a78b-71d8-4e4f-9939-48aa368574f4&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
+          "svg": "<svg class=\"bi bi-graph-up-arrow\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M0 0h1v15h15v1H0zm10 3.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V4.9l-3.613 4.417a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61L13.445 4H10.5a.5.5 0 0 1-.5-.5\" fill-rule=\"evenodd\"></path></svg>",
+          "data_title": "Acompanhamento Comercial"
+        },
+        {
+          "title": "Pipeline - Concentração e Risco",
+          "url": "https://app.powerbi.com/reportEmbed?reportId=0377cef5-351c-4a8c-b65e-ce57397e31cb&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
+          "svg": "<svg class=\"bi bi-card-checklist\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M7 5.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m-1.496-.854a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0l-.5-.5a.5.5 0 1 1 .708-.708l.146.147 1.146-1.147a.5.5 0 0 1 .708 0M7 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m-1.496-.854a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0l-.5-.5a.5.5 0 0 1 .708-.708l.146.147 1.146-1.147a.5.5 0 0 1 .708 0\" fill-rule=\"evenodd\"></path></svg>",
+          "data_title": "Pipeline - Concentração e Risco"
+        }
+      ]
+    },
+
+    {
+      "name": "Sales Intelligence",
+      "collapse_id": "asperintelligence",
+      "reports": [
+        {
+          "title": "Resumo Executivo de Vendas",
+          "url": "https://app.powerbi.com/reportEmbed?reportId=eb86d888-f492-43b4-a48c-bb40aacd5393&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
+          "svg": "<svg class=\"bi bi-bar-chart\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M4 11H2v3h2zm5-4H7v7h2zm5-5v12h-2V2zm-2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM6 7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm-5 4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1z\"></path></svg>",
+          "data_title": "Resumo Executivo de Vendas"
+        },
+        {
+          "title": "Cadência de Vendas",
+          "url": "https://app.powerbi.com/reportEmbed?reportId=71884cc2-59f1-4d0e-8652-163d35ea7dba&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
+          "svg": "<svg class=\"bi bi-graph-up-arrow\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M0 0h1v15h15v1H0zm10 3.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V4.9l-3.613 4.417a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61L13.445 4H10.5a.5.5 0 0 1-.5-.5\" fill-rule=\"evenodd\"></path></svg>",
+          "data_title": "Cadência de Vendas"
+        },
+          {
+          "title": "Resumo C-Level",
+          "url": "https://app.powerbi.com/reportEmbed?reportId=9724d56e-3aa2-4a68-a3f0-d80b83245a8a&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
+          "svg": "<svg class=\"bi bi-diagram-3\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M6 3.5A1.5 1.5 0 0 1 7.5 2h1A1.5 1.5 0 0 1 10 3.5v1A1.5 1.5 0 0 1 8.5 6v1H14a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-1 0V8h-5v.5a.5.5 0 0 1-1 0V8h-5v.5a.5.5 0 0 1-1 0v-1A.5.5 0 0 1 2 7h5.5V6A1.5 1.5 0 0 1 6 4.5zM8.5 5a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5zM0 11.5A1.5 1.5 0 0 1 1.5 10h1A1.5 1.5 0 0 1 4 11.5v1A1.5 1.5 0 0 1 2.5 14h-1A1.5 1.5 0 0 1 0 12.5zm1.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm4.5.5A1.5 1.5 0 0 1 7.5 10h1a1.5 1.5 0 0 1 1.5 1.5v1A1.5 1.5 0 0 1 8.5 14h-1A1.5 1.5 0 0 1 6 12.5zm1.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm4.5.5a1.5 1.5 0 0 1 1.5-1.5h1a1.5 1.5 0 0 1 1.5 1.5v1a1.5 1.5 0 0 1-1.5 1.5h-1a1.5 1.5 0 0 1-1.5-1.5zm1.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5z\" fill-rule=\"evenodd\"></path></svg>",
+          "data_title": "Resumo C-Level"
+        },
+        {
+          "title": "SPS - Sales Performance Score",
+          "url": "https://app.powerbi.com/reportEmbed?reportId=1092bccc-e27a-472d-ab13-4fc77ae0951e&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
+          "svg": "<svg class=\"bi bi-file-bar-graph\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M4.5 12a.5.5 0 0 1-.5-.5v-2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5zm3 0a.5.5 0 0 1-.5-.5v-4a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5zm3 0a.5.5 0 0 1-.5-.5v-6a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-.5.5z\"></path><path d=\"M4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2zm0 1h8a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1\"></path></svg>",
+          "data_title": "SPS - Sales Performance Score"
+        },
+        {
+          "title": "Monitoramento Deals",
+          "url": "https://app.powerbi.com/reportEmbed?reportId=7da691d4-b687-43a8-a9f2-6309db31147f&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
+          "svg": "<svg class=\"bi bi-file-text\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M5 4a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1zm-.5 2.5A.5.5 0 0 1 5 6h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5M5 8a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1zm0 2a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1z\"></path><path d=\"M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zm10-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1\"></path></svg>",
+          "data_title": "Monitoramento Deals"
+        },
+        {
+          "title": "Oportunidades Perdidas",
+          "url": "https://app.powerbi.com/reportEmbed?reportId=865fea56-8802-44b6-8c2c-59c04b5d0ee4&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
+          "svg": "<svg class=\"bi bi-graph-down-arrow\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M0 0h1v15h15v1H0zm10 11.5a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 0-1 0v2.6l-3.613-4.417a.5.5 0 0 0-.74-.037L7.06 8.233 3.404 3.206a.5.5 0 0 0-.808.588l4 5.5a.5.5 0 0 0 .758.06l2.609-2.61L13.445 11H10.5a.5.5 0 0 0-.5.5\" fill-rule=\"evenodd\"></path></svg>",
+          "data_title": "Perdidas"
+        },
+        {
+          "title": "Carteira",
+          "url": "https://app.powerbi.com/reportEmbed?reportId=b427e73f-c422-48c3-afd0-f97f109b7c2c&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
+          "svg": "<svg class=\"bi bi-credit-card\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v1h14V4a1 1 0 0 0-1-1zm13 4H1v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1z\"></path><path d=\"M2 10a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z\"></path></svg>",
+          "data_title": "Carteira"
+        },
+        {
+          "title": "Account View",
+          "url": "https://app.powerbi.com/reportEmbed?reportId=31c61a27-04f4-4dcb-b84d-1e5b6c4b2a7a&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
+          "svg": "<svg class=\"bi bi-briefcase\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M6.5 1A1.5 1.5 0 0 0 5 2.5V3H1.5A1.5 1.5 0 0 0 0 4.5v8A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-8A1.5 1.5 0 0 0 14.5 3H11v-.5A1.5 1.5 0 0 0 9.5 1zm0 1h3a.5.5 0 0 1 .5.5V3H6v-.5a.5.5 0 0 1 .5-.5m1.886 6.914L15 7.151V12.5a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5V7.15l6.614 1.764a1.5 1.5 0 0 0 .772 0M1.5 4h13a.5.5 0 0 1 .5.5v1.616L8.129 7.948a.5.5 0 0 1-.258 0L1 6.116V4.5a.5.5 0 0 1 .5-.5\"></path></svg>",
+          "data_title": "Account View"
+        }
+      ]
+    },
+
+    {
+      "name": "Sales Ops",
+      "collapse_id": "salesopsMenu2026",
+      "reports": [
+
+        {
+          "title": "All Hands",
+          "url": "https://app.powerbi.com/reportEmbed?reportId=4c30c06b-ee92-466f-a209-a4208f4c0a13&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
+          "svg": "<svg class=\"bi bi-justify\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M2 12.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m0-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m0-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m0-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5\" fill-rule=\"evenodd\"></path></svg>",
+          "data_title": "All Hands"
+        },
+        {
+          "title": "Previsibilidade de Projetos",
+          "url": "https://app.powerbi.com/reportEmbed?reportId=cec60068-b370-4859-b1e3-e003ab00bf19&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
+          "svg": "<svg class=\"bi bi-kanban\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M13.5 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1zm-11-1a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2z\"></path><path d=\"M6.5 3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1zm-4 0a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1zm8 0a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1z\"></path></svg>",
+          "data_title": "Previsibilidade de Projetos"
+        },
+        {
+          "title": "Base de Vendas",
+          "url": "https://app.powerbi.com/reportEmbed?reportId=e06c14b9-1004-46d1-98c4-cf618695ad84&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
+          "svg": "<svg class=\"bi bi-file-earmark-text\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M5.5 7a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1zM5 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m0 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5\"></path><path d=\"M9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.5zm0 1v2A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z\"></path></svg>",
+          "data_title": "Base de Vendas"
+        }
+      ]
+    },
+    {
+      "name": "Alianças",
+      "collapse_id": "fabricantes2026",
+      "reports": [
+        {
+          "title": "Fabricantes",
+          "url": "https://app.powerbi.com/reportEmbed?reportId=68197346-a188-4547-b3f6-60cf368380bf&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
+          "svg": "<svg class=\"bi bi-box-seam\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5l2.404.961L10.404 2zm3.564 1.426L5.596 5 8 5.961 14.154 3.5zm3.25 1.7-6.5 2.6v7.922l6.5-2.6V4.24zM7.5 14.762V6.838L1 4.239v7.923zM7.443.184a1.5 1.5 0 0 1 1.114 0l7.129 2.852A.5.5 0 0 1 16 3.5v8.662a1 1 0 0 1-.629.928l-7.185 2.874a.5.5 0 0 1-.372 0L.63 13.09a1 1 0 0 1-.63-.928V3.5a.5.5 0 0 1 .314-.464z\"></path></svg>",
+          "data_title": "Fabricantes"
+        },
+        {
+          "title": "Matriz Nine Box",
+          "url": "https://app.powerbi.com/reportEmbed?reportId=931f1b5b-1343-4316-9736-c0591f62e14e&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
+          "svg": "<svg class=\"bi bi-box-seam\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5l2.404.961L10.404 2zm3.564 1.426L5.596 5 8 5.961 14.154 3.5zm3.25 1.7-6.5 2.6v7.922l6.5-2.6V4.24zM7.5 14.762V6.838L1 4.239v7.923zM7.443.184a1.5 1.5 0 0 1 1.114 0l7.129 2.852A.5.5 0 0 1 16 3.5v8.662a1 1 0 0 1-.629.928l-7.185 2.874a.5.5 0 0 1-.372 0L.63 13.09a1 1 0 0 1-.63-.928V3.5a.5.5 0 0 1 .314-.464z\"></path></svg>",
+          "data_title": "Matriz Nine Box"
+        },
+        {
+          "title": "Matriz Cliente / Fabricante",
+          "url": "https://app.powerbi.com/reportEmbed?reportId=b71105be-9614-4406-8c32-445e8d987df9&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
+          "svg": "<svg class=\"bi bi-columns-gap\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M6 1v3H1V1zM1 0a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1V1a1 1 0 0 0-1-1zm14 12v3h-5v-3zm-5-1a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1zM6 8v7H1V8zM1 7a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1zm14-6v7h-5V1zm-5-1a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1V1a1 1 0 0 0-1-1z\"></path></svg>",
+          "data_title": "Matriz Cliente / Fabricante"
+        },
+        {
+          "title": "Rentabilidade Fabricantes",
+          "url": "https://app.powerbi.com/reportEmbed?reportId=9f8928bc-6239-4591-ae1e-1f08ff690276&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
+          "svg": "<svg class=\"bi bi-columns-gap\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M6 1v3H1V1zM1 0a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1V1a1 1 0 0 0-1-1zm14 12v3h-5v-3zm-5-1a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1zM6 8v7H1V8zM1 7a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1zm14-6v7h-5V1zm-5-1a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1V1a1 1 0 0 0-1-1z\"></path></svg>",
+          "data_title": "Rentabilidade Fabricantes"
+        },
+        {
+          "title": "Evolução Pipeline 2026 por Fabricante",
+          "url": "https://app.powerbi.com/reportEmbed?reportId=7c6b6b52-a244-4c59-8eb7-b8b8a9944555&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
+          "svg": "<svg class=\"bi bi-bar-chart-fill\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M1 11a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm5-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm5-5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1z\"></path></svg>",
+          "data_title": "Evolução Pipeline 2026 por Fabricante"
+        }
+      ]
+    },
+    {
+      "name": "Pré-vendas",
+      "collapse_id": "prevendasMenu2026",
+      "reports": [
+        {
+          "title": "Gestão Pré-Vendas",
+          "url": "https://app.powerbi.com/reportEmbed?reportId=8f25e5a6-3ecf-469e-ac99-4f52d944100d&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
+          "svg": "<svg class=\"bi bi-bullseye\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16\"></path><path d=\"M8 13A5 5 0 1 1 8 3a5 5 0 0 1 0 10m0 1A6 6 0 1 0 8 2a6 6 0 0 0 0 12\"></path><path d=\"M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6m0 1a4 4 0 1 0 0-8 4 4 0 0 0 0 8\"></path><path d=\"M9.5 8a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0\"></path></svg>",
+          "data_title": "Gestão Pré-Vendas"
+        },
+        {
+          "title": "Certificações Pré-Vendas",
+          "url": "https://app.powerbi.com/reportEmbed?reportId=59318a47-d338-4f13-b1f2-d7ca3058dbac&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
+          "svg": "<svg class=\"bi bi-file-earmark\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5z\"></path></svg>",
+          "data_title": "Certificações Pré-Vendas"
+        }
+      ]
+    },
+    // {
+    //   "name": "Asper USA",
+    //   "collapse_id": "DiretoriaMenueua",
+    //   "reports": [
+    //     {
+    //       "title": "Sales Executive Summary",
+    //       "url": "https://app.powerbi.com/reportEmbed?reportId=de860be6-17e5-4d19-94fd-296bfd67c1b4&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
+    //       "svg": "<svg class=\"bi bi-bar-chart\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M4 11H2v3h2zm5-4H7v7h2zm5-5v12h-2V2zm-2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM6 7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm-5 4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1z\"></path></svg>",
+    //       "data_title": "Sales Executive Summary"
+    //     }
+    //   ]
+    // }
+  ],
+  // FIM DO BLOCO 2026
+
+  // INICIO DO BLOCO 2025
   "2025": [
     {
       "name": "Sales Corporate",
@@ -1072,6 +1505,7 @@ const REPORTS_BY_YEAR = {
     }
   ]
 };
+//FIM DO BLOCO 2025
 
 // GERA O HTML DE UMA PASTA(COM SEUS ITENS) A PARTIR DOS DADOS DE REPORT_BY_YEAR
 function renderReportFolder(folder, yearSuffix) {
@@ -1104,13 +1538,21 @@ function renderReportFolder(folder, yearSuffix) {
     </ul>`;
 }
 
-//REBDERIZA TODAS AS PASTAS DO ANO SELECIONADO
+// RENDERIZA AS PASTAS DO ANO SELECIONADO, JÁ FILTRADAS PELO PERFIL ATUAL (currentProfile).
+// Se currentProfile ainda não estiver definido (ex.: antes do login), mostra tudo por
+// segurança de UX — mas nesse ponto a tela de portal ainda está oculta mesmo.
 function renderYearMenu(year) {
+  currentYear = year;
   const container = document.getElementById('year-reports-container');
   if (!container) return;
 
   const folders = REPORTS_BY_YEAR[year] || [];
-  container.innerHTML = folders.map(f => renderReportFolder(f, year)).join('');
+  const allowedNames = currentProfile ? currentProfile.folders : null;
+  const visibleFolders = allowedNames
+    ? folders.filter(f => allowedNames.includes(f.name))
+    : folders;
+
+  container.innerHTML = visibleFolders.map(f => renderReportFolder(f, year)).join('');
 
   feather.replace();
   updateFavoriteStars();
@@ -1131,6 +1573,7 @@ function selectReportYear(year, btn) {
 
 document.addEventListener('DOMContentLoaded', function() {
   populateEmailFromStorage();
+  renderProfileButtons();
   feather.replace();
   updateFavoriteStars();
   loadUserFavorites();
