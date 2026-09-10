@@ -628,12 +628,23 @@ let currentYear = '2026';  // ano atualmente selecionado no menu de relatórios
 // abaixo estiver vazia, logAccess() não faz nada (nenhuma chamada de rede).
 const LOG_WEBHOOK_URL = 'https://default33f70dd65ac04e74a8c47736b9998d.e1.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/00/workflows/db6f1b89b0c547ce8829b9f828b9fbc3/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=fuYsptFIP-E_dXGwULljGDZbkWgiyf3ljUkodlX4rxI';
 
+// GERA O TIMESTAMP NO FUSO DE BRASÍLIA (America/Sao_Paulo), independente do
+// fuso configurado no computador de quem está acessando o portal
+function getLocalTimestamp() {
+  return new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: false
+  }).format(new Date());
+}
+
 // ENVIA UM EVENTO DE ACESSO PARA A LISTA DO SHAREPOINT, DE FORMA SILENCIOSA
 // (não bloqueia a navegação nem mostra erro pro usuário se falhar)
 function logAccess(action, details) {
   if (!LOG_WEBHOOK_URL) return; // log desativado até a URL ser configurada
   const payload = {
-    timestamp: new Date().toISOString(),
+    timestamp: getLocalTimestamp(),
     userName: localStorage.getItem('userName') || '',
     userEmail: localStorage.getItem('userEmail') || '',
     profile: currentProfile ? currentProfile.label : '',
