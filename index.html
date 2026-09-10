@@ -622,6 +622,34 @@ let currentProfile = null; // objeto de PROFILES escolhido no login
 let currentYear = '2026';  // ano atualmente selecionado no menu de relatórios
 
 // ============================================
+// LOG DE ACESSOS (SharePoint via Power Automate)
+// ============================================
+//Fluxo do Power Automate (gatilho "Quando uma
+// solicitação HTTP for recebida"). Enquanto estiver vazia, o log fica desativado
+// e nada é enviado — nenhuma chamada de rede acontece.
+const LOG_WEBHOOK_URL = 'https://default33f70dd65ac04e74a8c47736b9998d.e1.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/00/workflows/db6f1b89b0c547ce8829b9f828b9fbc3/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=fuYsptFIP-E_dXGwULljGDZbkWgiyf3ljUkodlX4rxI'; 
+
+// ENVIA UM EVENTO DE ACESSO PARA A LISTA DO SHAREPOINT, DE FORMA SILENCIOSA
+// (não bloqueia a navegação nem mostra erro pro usuário se falhar)
+function logAccess(action, details) {
+  if (!LOG_WEBHOOK_URL) return; // log desativado até a URL ser configurada
+  const payload = {
+    timestamp: new Date().toISOString(),
+    userName: localStorage.getItem('userName') || '',
+    userEmail: localStorage.getItem('userEmail') || '',
+    profile: currentProfile ? currentProfile.label : '',
+    action: action,
+    details: details || ''
+  };
+  fetch(LOG_WEBHOOK_URL, {
+    method: 'POST',
+    mode: 'no-cors', // o gatilho HTTP do Power Automate não retorna cabeçalhos CORS
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).catch(function() { /* falha de rede não deve travar o portal */ });
+}
+
+// ============================================
 // PERFIS / DIRETORIAS
 // ============================================
 // Cada perfil é só uma "lente" de navegação: define qual relatório abre por
@@ -659,7 +687,7 @@ const PROFILES = [
       title: 'Cadência de Vendas - Sales Intelligence',
       url: 'https://app.powerbi.com/reportEmbed?reportId=71884cc2-59f1-4d0e-8652-163d35ea7dba&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1'
     },
-    folders: ['Sales Corporate', 'Sales Strategic', 'Sales Intelligence', 'Sales Ops', 'Alianças', 'Pré-vendas', 'CSM']
+    folders: ['Sales Corporate', 'Sales Strategic', 'Sales Intelligence', 'Sales Ops', 'Alianças', 'Pré-vendas']
   }
  ,
 
