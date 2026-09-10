@@ -1,5 +1,4 @@
 
-
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -624,10 +623,10 @@ let currentYear = '2026';  // ano atualmente selecionado no menu de relatórios
 // ============================================
 // LOG DE ACESSOS (SharePoint via Power Automate)
 // ============================================
-//Fluxo do Power Automate (gatilho "Quando uma
-// solicitação HTTP for recebida"). Enquanto estiver vazia, o log fica desativado
-// e nada é enviado — nenhuma chamada de rede acontece.
-const LOG_WEBHOOK_URL = 'https://default33f70dd65ac04e74a8c47736b9998d.e1.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/00/workflows/db6f1b89b0c547ce8829b9f828b9fbc3/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=fuYsptFIP-E_dXGwULljGDZbkWgiyf3ljUkodlX4rxI'; 
+// Fluxo do Power Automate configurado com gatilho HTTP "Anyone" + ação
+// "Create item" na lista "Portal Acessos" do SharePoint. Enquanto a URL
+// abaixo estiver vazia, logAccess() não faz nada (nenhuma chamada de rede).
+const LOG_WEBHOOK_URL = 'https://default33f70dd65ac04e74a8c47736b9998d.e1.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/00/workflows/db6f1b89b0c547ce8829b9f828b9fbc3/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=fuYsptFIP-E_dXGwULljGDZbkWgiyf3ljUkodlX4rxI';
 
 // ENVIA UM EVENTO DE ACESSO PARA A LISTA DO SHAREPOINT, DE FORMA SILENCIOSA
 // (não bloqueia a navegação nem mostra erro pro usuário se falhar)
@@ -687,7 +686,7 @@ const PROFILES = [
       title: 'Cadência de Vendas - Sales Intelligence',
       url: 'https://app.powerbi.com/reportEmbed?reportId=71884cc2-59f1-4d0e-8652-163d35ea7dba&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1'
     },
-    folders: ['Sales Corporate', 'Sales Strategic', 'Sales Intelligence', 'Sales Ops', 'Alianças', 'Pré-vendas']
+    folders: ['Sales Corporate', 'Sales Strategic', 'Sales Intelligence', 'Sales Ops', 'Alianças', 'Pré-vendas', 'CSM']
   }
  ,
 
@@ -792,6 +791,7 @@ function logar_email(tipo) {
 
   loadReport(profile.defaultReport.title, profile.defaultReport.url);
   renderYearMenu(currentYear); // já filtra as pastas pelo currentProfile
+  logAccess('login'); // registra o login na lista do SharePoint (se o webhook estiver configurado)
 
   swal(
 "Login realizado!",
@@ -844,6 +844,7 @@ function logar_email(tipo) {
       renderYearMenu(currentYear);
       updateProfileBadge();
       closeProfileModal();
+      logAccess('trocar_perfil', profile.label); // registra a troca de perfil na lista do SharePoint
 
       swal("Área alterada!", `Agora exibindo: ${profile.label}`, "success");
     }
@@ -1408,21 +1409,9 @@ const REPORTS_BY_YEAR = {
           "url": "https://app.powerbi.com/reportEmbed?reportId=b257a5a8-18dc-4a2e-b7b3-e62dae2f1284&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
           "svg": "<svg class=\"bi bi-person-vcard\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M5 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4m4-2.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 1-.5-.5M9 8a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 0 1h-4A.5.5 0 0 1 9 8m1 2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5\"></path><path d=\"M2 2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM1 4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H8.96q.04-.245.04-.5C9 10.567 7.21 9 5 9c-2.086 0-3.8 1.398-3.984 3.181A1 1 0 0 1 1 12z\"></path></svg>",
           "data_title": "Customer Success Management"
-        },
+        }
       ]
-    },
-    // {
-    //   "name": "Asper USA",
-    //   "collapse_id": "DiretoriaMenueua",
-    //   "reports": [
-    //     {
-    //       "title": "Sales Executive Summary",
-    //       "url": "https://app.powerbi.com/reportEmbed?reportId=de860be6-17e5-4d19-94fd-296bfd67c1b4&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1",
-    //       "svg": "<svg class=\"bi bi-bar-chart\" fill=\"currentColor\" height=\"16\" viewbox=\"0 0 16 16\" width=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M4 11H2v3h2zm5-4H7v7h2zm5-5v12h-2V2zm-2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM6 7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm-5 4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1z\"></path></svg>",
-    //       "data_title": "Sales Executive Summary"
-    //     }
-    //   ]
-    // }
+    }
   ],
   // FIM DO BLOCO 2026
 
@@ -1645,6 +1634,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function loadReport(title, url, element) {
     if (!url) return;
     if (title === 'CRM') {
+        logAccess('abrir_crm', title); // registra abertura do CRM na lista do SharePoint
         window.open(
             'https://app.hubspot.com/contacts/50100454/objects/0-3/views/all/list',
             '_blank',
@@ -1661,6 +1651,7 @@ function loadReport(title, url, element) {
 //EXIBE O SPINNER ENQUANTO O POWER BI É CARREGADO
     showReportLoading();
     iframe.src = url;
+    logAccess('abrir_relatorio', title); // registra abertura do relatório na lista do SharePoint
     const reportTitle = document.getElementById('report-title');
     if (reportTitle) {
         reportTitle.textContent = title;
