@@ -642,10 +642,13 @@ function logAccess(action, details) {
   };
   fetch(LOG_WEBHOOK_URL, {
     method: 'POST',
-    mode: 'no-cors', // o gatilho HTTP do Power Automate não retorna cabeçalhos CORS
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
-  }).catch(function() { /* falha de rede não deve travar o portal */ });
+  })
+    .then(function(res) {
+      if (!res.ok) console.error('logAccess: resposta não-OK do webhook', res.status);
+    })
+    .catch(function(err) { console.error('logAccess: falha ao enviar log', err); });
 }
 
 // ============================================
