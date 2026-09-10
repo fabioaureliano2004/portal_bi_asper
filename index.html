@@ -631,12 +631,14 @@ const LOG_WEBHOOK_URL = 'https://default33f70dd65ac04e74a8c47736b9998d.e1.enviro
 // GERA O TIMESTAMP NO FUSO DE BRASÍLIA (America/Sao_Paulo), independente do
 // fuso configurado no computador de quem está acessando o portal
 function getLocalTimestamp() {
-  return new Intl.DateTimeFormat('sv-SE', {
+  const parts = new Intl.DateTimeFormat('pt-BR', {
     timeZone: 'America/Sao_Paulo',
     year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit', second: '2-digit',
     hour12: false
-  }).format(new Date());
+  }).formatToParts(new Date());
+  const get = type => parts.find(p => p.type === type).value;
+  return `${get('day')}/${get('month')}/${get('year')} ${get('hour')}:${get('minute')}:${get('second')}`;
 }
 
 // ENVIA UM EVENTO DE ACESSO PARA A LISTA DO SHAREPOINT, DE FORMA SILENCIOSA
