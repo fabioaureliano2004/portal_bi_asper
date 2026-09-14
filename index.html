@@ -644,7 +644,7 @@ function getLocalTimestamp() {
 // ENVIA UM EVENTO DE ACESSO PARA A LISTA DO SHAREPOINT, DE FORMA SILENCIOSA
 // (não bloqueia a navegação nem mostra erro pro usuário se falhar)
 function logAccess(action, details) {
-  if (!LOG_WEBHOOK_URL) return; // log desativado até a URL ser configurada
+  if (!LOG_WEBHOOK_URL) return; 
   const payload = {
     timestamp: getLocalTimestamp(),
     userName: localStorage.getItem('userName') || '',
@@ -684,7 +684,7 @@ const PROFILES = [
       title: 'Cadência de Vendas - Corporate',
       url: 'https://app.powerbi.com/reportEmbed?reportId=6f55fb9b-386d-4161-9738-5ba33c28e08c&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1'
     },
-    folders: ['Sales Corporate', 'Alianças', 'Pré-vendas','Sales Intelligence', 'Sales Ops']
+    folders: ['Sales Corporate', 'Alianças', 'Pré-vendas','Sales Intelligence', 'Sales Ops', 'Governança']
   },
   {
     id: 'strategic',
@@ -693,7 +693,7 @@ const PROFILES = [
       title: 'Cadência de Vendas - Strategic',
       url: 'https://app.powerbi.com/reportEmbed?reportId=ce20a78b-71d8-4e4f-9939-48aa368574f4&autoAuth=true&ctid=33f70dd6-5ac0-4e74-a8c4-7736b9998de1'
     },
-    folders: ['Sales Strategic', 'Alianças', 'Pré-vendas', 'Sales Intelligence', 'Sales Ops']
+    folders: ['Sales Strategic', 'Alianças', 'Pré-vendas', 'Sales Intelligence', 'Sales Ops', 'Governança']
   },
   {
     id: 'revops',
